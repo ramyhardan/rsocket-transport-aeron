@@ -19,13 +19,29 @@ public class AeronServerWrapper implements Closeable {
     this.onClose = MonoProcessor.create();
     // todo: onClose.doFinally(signalType -> { doSomething() }).subscribe();
 
+    System.err.println("AeronServerWrapper create server");
     server = AeronServer.create("server", aeronOptions);
-    server.newHandler(
-        (inbound, outbound) -> {
-          AeronDuplexConnection duplexConnection = new AeronDuplexConnection(inbound, outbound);
-          acceptor.apply(duplexConnection);
-          return onClose.doFinally(s -> duplexConnection.dispose());
-        });
+    server
+        .newHandler(
+            (inbound, outbound) -> {
+              System.err.println(
+                  "AeronServerWrapper handler triggers only when a client connects to server");
+              AeronDuplexConnection duplexConnection = new AeronDuplexConnection(inbound, outbound);
+              return acceptor
+                  .apply(duplexConnection)
+                  .log("AeronServerWrapper Acceptor apply duplex ")
+                  .doOnSuccess(s -> System.err.println("AeronServerWrapper is started"))
+                  .then(
+                      onClose.doFinally(
+                          s -> {
+                            System.err.println("AeronServerWrapper duplexConnection.dispose()");
+                            duplexConnection.dispose();
+                          }));
+            })
+        .log("AeronServerWrapper newHandler ")
+        .block(); // todo fix it
+
+    System.err.println("AeronServerWrapper finishes its setup");
   }
 
   @Override

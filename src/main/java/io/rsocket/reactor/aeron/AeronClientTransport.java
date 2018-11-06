@@ -17,16 +17,19 @@ public class AeronClientTransport implements ClientTransport {
 
   @Override
   public Mono<DuplexConnection> connect() {
-    return Mono.create(
-        sink -> {
-          AeronClient client = AeronClient.create("client", options);
-          client.newHandler(
-              (inbound, outbound) -> {
-                AeronDuplexConnection duplexConnection =
-                    new AeronDuplexConnection(inbound, outbound);
-                sink.success(duplexConnection);
-                return duplexConnection.onClose();
-              });
-        });
+    return Mono.<DuplexConnection>create(
+            sink -> {
+              AeronClient client = AeronClient.create("client", options);
+              client
+                  .newHandler(
+                      (inbound, outbound) -> {
+                        AeronDuplexConnection duplexConnection =
+                            new AeronDuplexConnection(inbound, outbound);
+                        sink.success(duplexConnection);
+                        return duplexConnection.onClose();
+                      })
+                  .block(); // todo fix it
+            })
+        .log("AeronClientTransport connect ");
   }
 }

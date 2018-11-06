@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.rsocket.DuplexConnection;
 import io.rsocket.Frame;
-import java.nio.ByteBuffer;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -27,20 +26,38 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Mono<Void> send(Publisher<Frame> frames) {
-    return outbound.send(Flux.from(frames).map(Frame::content).map(this::toByteBuffer)).then();
+
+    //    return Flux.from(frames).collectMap(this::sendOne).then();
+
+    return outbound
+        .send(
+            Flux.from(frames)
+                .log("DuplexConn send -> ")
+                .map(Frame::content)
+                .map(ByteBuf::nioBuffer))
+        .then()
+        .log("DuplexConn send then -> ");
+  }
+
+  @Override
+  public Mono<Void> sendOne(Frame frame) {
+    return outbound
+        .send(
+            Mono.just(frame)
+                .log("DuplexConn sendOne -> ")
+                .map(Frame::content)
+                .map(ByteBuf::nioBuffer))
+        .then()
+        .log("DuplexConn sendOne then-> ");
   }
 
   @Override
   public Flux<Frame> receive() {
-    return inbound.receive().map(this::toByteBuf).map(Frame::from);
-  }
-
-  private ByteBuf toByteBuf(ByteBuffer byteBuffer) {
-    return Unpooled.wrappedBuffer(byteBuffer);
-  }
-
-  private ByteBuffer toByteBuffer(ByteBuf byteBuf) {
-    return byteBuf.nioBuffer();
+    return inbound
+        .receive()
+        .map(Unpooled::wrappedBuffer)
+        .map(Frame::from)
+        .log("DuplexConn receive -> ");
   }
 
   @Override
@@ -53,5 +70,10 @@ public class AeronDuplexConnection implements DuplexConnection {
     if (!onClose.isDisposed()) {
       onClose.onComplete();
     }
+  }
+
+  @Override
+  public boolean isDisposed() {
+    return onClose.isDisposed();
   }
 }
