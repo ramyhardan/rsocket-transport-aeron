@@ -24,7 +24,7 @@
   </Appenders>
 
   <Loggers>
-    <AsyncRoot level="${env:logLevel:-debug}">
+    <AsyncRoot level="${env:logLevel:-ALL}">
       <AppenderRef ref="FILE"/>
       <AppenderRef ref="STDOUT"/>
     </AsyncRoot>

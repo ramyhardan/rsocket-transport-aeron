@@ -41,14 +41,9 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Mono<Void> sendOne(Frame frame) {
-    return outbound
-        .send(
-            Mono.just(frame)
-                .log("DuplexConn sendOne -> ")
-                .map(Frame::content)
-                .map(ByteBuf::nioBuffer))
-        .then()
-        .log("DuplexConn sendOne then-> ");
+    return send(Mono.just(frame)
+        .log("DuplexConn sendOne -> "))
+        .then();
   }
 
   @Override
@@ -62,11 +57,12 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Mono<Void> onClose() {
-    return onClose;
+    return onClose.log(" DuplexConn onClose ");
   }
 
   @Override
   public void dispose() {
+    System.err.println("DuplexConn dispose ");
     if (!onClose.isDisposed()) {
       onClose.onComplete();
     }

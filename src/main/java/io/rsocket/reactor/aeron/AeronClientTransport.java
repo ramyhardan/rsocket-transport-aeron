@@ -2,6 +2,7 @@ package io.rsocket.reactor.aeron;
 
 import io.rsocket.DuplexConnection;
 import io.rsocket.transport.ClientTransport;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import reactor.core.publisher.Mono;
 import reactor.ipc.aeron.client.AeronClient;
@@ -20,15 +21,30 @@ public class AeronClientTransport implements ClientTransport {
     return Mono.<DuplexConnection>create(
             sink -> {
               AeronClient client = AeronClient.create("client", options);
+              AtomicReference<AeronDuplexConnection> holder = new AtomicReference<>(); // todo
               client
                   .newHandler(
                       (inbound, outbound) -> {
                         AeronDuplexConnection duplexConnection =
                             new AeronDuplexConnection(inbound, outbound);
-                        sink.success(duplexConnection);
+                        holder.set(duplexConnection);
                         return duplexConnection.onClose();
                       })
-                  .block(); // todo fix it
+                  .doOnSuccess(
+                      $ -> {
+                        AeronDuplexConnection duplexConnection = holder.get();
+                        sink.success(duplexConnection);
+
+                        // todo for test (before sink - it works!!!!!)
+                        // duplexConnection.sendOne(Frame.Setup.from(0, 0, 0, "", "",
+                        // EmptyPayload.INSTANCE))
+                        //     .then()
+                        //     .log("raw test send5 ")
+                        //     .subscribeOn(Schedulers.single())
+                        //     .subscribe();
+
+                      })
+                  .subscribe();
             })
         .log("AeronClientTransport connect ");
   }
