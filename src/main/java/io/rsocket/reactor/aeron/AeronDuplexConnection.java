@@ -6,6 +6,8 @@ import io.rsocket.DuplexConnection;
 import io.rsocket.Frame;
 import java.nio.ByteBuffer;
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
@@ -13,26 +15,43 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 import reactor.ipc.aeron.AeronInbound;
 import reactor.ipc.aeron.AeronOutbound;
+import reactor.ipc.aeron.ByteBufferFlux;
 
 public class AeronDuplexConnection implements DuplexConnection {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(AeronDuplexConnection.class);
+
+  private final EmitterProcessor<ByteBuffer> processor = EmitterProcessor.create();
+
   private final MonoProcessor<Void> onClose;
-  private final AeronInbound inbound;
-  private final AeronOutbound outbound;
-  private final EmitterProcessor<ByteBuffer> processor;
   private final Disposable disposable;
+  private final ByteBufferFlux receive;
 
   public AeronDuplexConnection(AeronInbound inbound, AeronOutbound outbound) {
-    this.processor = EmitterProcessor.create();
-    this.inbound = inbound;
-    this.outbound = outbound;
     this.onClose = MonoProcessor.create();
+    this.receive = inbound.receive();
 
-    // todo: onClose.doFinally(signalType -> { doSomething() }).subscribe();
+    this.disposable =
+        outbound
+            .send(processor)
+            .then()
+            .subscribe(
+                null,
+                th -> {
+                  LOGGER.info("outbound of {} was failed with error: {}", this, th);
+                  dispose();
+                },
+                this::dispose);
 
-    this.disposable = outbound.send(processor).then().subscribe(null, th -> {
-      // todo
-    });
+    this.receive
+        .doOnTerminate( // todo
+            () -> {
+              LOGGER.info("{} was terminated", this);
+              dispose();
+            })
+        .subscribe(null, th -> LOGGER.info("inbound of {} was failed with error: {}", this, th));
+
+    onClose.doOnTerminate(this::dispose).subscribe();
   }
 
   @Override
@@ -53,11 +72,7 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Flux<Frame> receive() {
-    return inbound
-        .receive()
-        .map(Unpooled::wrappedBuffer)
-        .map(Frame::from)
-        .log("DuplexConn receive -> ");
+    return receive.map(Unpooled::wrappedBuffer).map(Frame::from).log("DuplexConn receive -> ");
   }
 
   @Override
@@ -67,9 +82,16 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public void dispose() {
+    System.err.println("DUPLEX_CONN_DISPOSE");
     if (!onClose.isDisposed()) {
       onClose.onComplete();
     }
+    if (!disposable.isDisposed()) {
+      disposable.dispose();
+    }
+//    if (!processor.isDisposed()) {
+//      processor.dispose();
+//    } //todo
   }
 
   @Override

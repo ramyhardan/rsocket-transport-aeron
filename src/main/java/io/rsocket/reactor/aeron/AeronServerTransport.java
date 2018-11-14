@@ -1,6 +1,7 @@
 package io.rsocket.reactor.aeron;
 
 import io.rsocket.Closeable;
+import io.rsocket.DuplexConnection;
 import io.rsocket.transport.ServerTransport;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
@@ -22,7 +23,62 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
 
   @Override
   public Mono<Closeable> start(ConnectionAcceptor acceptor) {
-    return Mono.defer(() -> new AeronServerWrapper(acceptor, aeronOptions).start());
+    return Mono.create(
+        sink -> {
+          AeronServer server = AeronServer.create("server", aeronOptions);
+          AeronServerWrapper aeronServerWrapper = new AeronServerWrapper(server);
+          server
+              .newHandler(
+                  (in, out) -> {
+                    DuplexConnection duplexConnection = new AeronDuplexConnection(in, out);
+
+                    duplexConnection
+                        .onClose()
+                        .doOnTerminate(
+                            () -> {
+                              LOGGER.info(
+                                  "{} was disposed, dispose {}",
+                                  duplexConnection,
+                                  aeronServerWrapper);
+                              aeronServerWrapper.dispose();
+                            })
+                        .subscribe();
+
+                    aeronServerWrapper
+                        .onClose()
+                        .doOnTerminate(
+                            () -> {
+                              LOGGER.info(
+                                  "{} was disposed, dispose {}",
+                                  aeronServerWrapper,
+                                  duplexConnection);
+                              duplexConnection.dispose();
+                            })
+                        .subscribe();
+
+                    return acceptor
+                        .apply(duplexConnection)
+                        .doOnError(
+                            th -> {
+                              LOGGER.warn(
+                                  "Rsocket processing of {} was finished with error: {}",
+                                  duplexConnection,
+                                  th);
+                              aeronServerWrapper.dispose();
+                            })
+                        .then(duplexConnection.onClose());
+                  })
+              .subscribe(
+                  avoid -> {
+                    LOGGER.info("AeronServer was started");
+                    sink.success(aeronServerWrapper);
+                  },
+                  th -> {
+                    LOGGER.warn("Failed to create aeronServer: {}", th);
+                    aeronServerWrapper.dispose();
+                    sink.error(th);
+                  });
+        });
   }
 
   private static class AeronServerWrapper implements Closeable {
@@ -30,60 +86,10 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
     @SuppressWarnings("unused")
     private final AeronServer server;
 
-    private final ConnectionAcceptor acceptor;
-    private final Consumer<AeronOptions> aeronOptions;
-    private final MonoProcessor<Void> onClose;
+    private final MonoProcessor<Void> onClose = MonoProcessor.create();
 
-    private AeronServerWrapper(ConnectionAcceptor acceptor, Consumer<AeronOptions> aeronOptions) {
-      this(null, acceptor, aeronOptions, MonoProcessor.create());
-    }
-
-    private AeronServerWrapper(AeronServer server, AeronServerWrapper other) {
-      this(server, other.acceptor, other.aeronOptions, other.onClose);
-    }
-
-    private AeronServerWrapper(
-        AeronServer server,
-        ConnectionAcceptor acceptor,
-        Consumer<AeronOptions> aeronOptions,
-        MonoProcessor<Void> onClose) {
+    private AeronServerWrapper(AeronServer server) {
       this.server = server;
-      this.acceptor = acceptor;
-      this.aeronOptions = aeronOptions;
-      this.onClose = onClose;
-    }
-
-    private Mono<AeronServerWrapper> start() {
-      return Mono.create(
-          sink -> {
-            AeronServer server = AeronServer.create("server", aeronOptions);
-            server
-                .newHandler(
-                    (inbound, outbound) -> {
-                      AeronDuplexConnection duplexConnection =
-                          new AeronDuplexConnection(inbound, outbound);
-                      onClose.doOnTerminate(
-                          () -> {
-                            System.err.println(
-                                "AeronServerWrapper duplexConnection.dispose()");
-                            duplexConnection.dispose();
-                          }); //todo
-                      return acceptor
-                          .apply(duplexConnection)
-                          .doOnError(th -> onClose.onComplete()) // todo
-                          .doOnCancel(() -> onClose.onComplete()) //todo
-                          .doOnSuccess(avoid -> {
-
-                          })
-                          .then(duplexConnection.onClose());
-                    })
-                .subscribe(
-                    avoid -> sink.success(new AeronServerWrapper(server, this)),
-                    th -> {
-                      LOGGER.warn("Failed to create aeronServer: {}", th);
-                      sink.error(th);
-                    });
-          });
     }
 
     @Override
