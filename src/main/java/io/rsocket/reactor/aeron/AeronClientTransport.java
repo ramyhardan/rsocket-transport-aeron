@@ -31,7 +31,7 @@ public class AeronClientTransport implements ClientTransport {
                         return duplexConnection.onClose();
                       })
                   .doOnSuccess(
-                      $ -> {
+                      disposable -> {
                         AeronDuplexConnection duplexConnection = holder.get();
                         sink.success(duplexConnection);
 

@@ -4,7 +4,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.rsocket.DuplexConnection;
 import io.rsocket.Frame;
+import java.nio.ByteBuffer;
 import org.reactivestreams.Publisher;
+import reactor.core.Disposable;
+import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
@@ -16,34 +19,34 @@ public class AeronDuplexConnection implements DuplexConnection {
   private final MonoProcessor<Void> onClose;
   private final AeronInbound inbound;
   private final AeronOutbound outbound;
+  private final EmitterProcessor<ByteBuffer> processor;
+  private final Disposable disposable;
 
   public AeronDuplexConnection(AeronInbound inbound, AeronOutbound outbound) {
+    this.processor = EmitterProcessor.create();
     this.inbound = inbound;
     this.outbound = outbound;
     this.onClose = MonoProcessor.create();
+
     // todo: onClose.doFinally(signalType -> { doSomething() }).subscribe();
+
+    this.disposable = outbound.send(processor).then().subscribe(null, th -> {});
   }
 
   @Override
   public Mono<Void> send(Publisher<Frame> frames) {
-
-    //    return Flux.from(frames).collectMap(this::sendOne).then();
-
-    return outbound
-        .send(
+    return Mono.create(
+        sink ->
             Flux.from(frames)
                 .log("DuplexConn send -> ")
                 .map(Frame::content)
-                .map(ByteBuf::nioBuffer))
-        .then()
-        .log("DuplexConn send then -> ");
+                .map(ByteBuf::nioBuffer)
+                .subscribe(processor::onNext, sink::error, sink::success));
   }
 
   @Override
   public Mono<Void> sendOne(Frame frame) {
-    return send(Mono.just(frame)
-        .log("DuplexConn sendOne -> "))
-        .then();
+    return send(Mono.just(frame));
   }
 
   @Override
