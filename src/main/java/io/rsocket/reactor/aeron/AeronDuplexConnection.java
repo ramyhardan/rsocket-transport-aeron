@@ -30,7 +30,9 @@ public class AeronDuplexConnection implements DuplexConnection {
 
     // todo: onClose.doFinally(signalType -> { doSomething() }).subscribe();
 
-    this.disposable = outbound.send(processor).then().subscribe(null, th -> {});
+    this.disposable = outbound.send(processor).then().subscribe(null, th -> {
+      // todo
+    });
   }
 
   @Override
@@ -60,12 +62,11 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Mono<Void> onClose() {
-    return onClose.log(" DuplexConn onClose ");
+    return onClose;
   }
 
   @Override
   public void dispose() {
-    System.err.println("DuplexConn dispose ");
     if (!onClose.isDisposed()) {
       onClose.onComplete();
     }
