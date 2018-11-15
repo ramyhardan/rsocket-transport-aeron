@@ -24,6 +24,8 @@ public class AeronClientTransport implements ClientTransport {
     return Mono.create(
         sink -> {
           AeronClient client = AeronClient.create("client", options);
+          // todo need to dispose of the client when we don't need it anymore,
+          // it contains a set of all clientHandlers and its disposing close all them
           client
               .newHandler(
                   (inbound, outbound) -> {
@@ -39,7 +41,10 @@ public class AeronClientTransport implements ClientTransport {
                         .doOnTerminate(client::dispose);
                   })
               .subscribe(
-                  null,
+                  clientHandler -> {
+                    // todo it contains in/out, need to store and dispose when
+                    // duplexConnection will be disposed. Don't dispose client!
+                  },
                   th -> {
                     LOGGER.warn("Failed to create client or connect duplexConnection: {}", th);
                     client.dispose();

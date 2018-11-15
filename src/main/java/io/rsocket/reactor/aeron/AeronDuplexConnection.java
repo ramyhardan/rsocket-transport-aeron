@@ -22,16 +22,14 @@ public class AeronDuplexConnection implements DuplexConnection {
   private static final Logger LOGGER = LoggerFactory.getLogger(AeronDuplexConnection.class);
 
   private final EmitterProcessor<ByteBuffer> processor = EmitterProcessor.create();
+  private final MonoProcessor<Void> onClose = MonoProcessor.create();
 
-  private final MonoProcessor<Void> onClose;
-  private final Disposable disposable;
-  private final ByteBufferFlux receive;
+  private final ByteBufferFlux inbound;
+  private final Disposable outboundDisposable;
 
   public AeronDuplexConnection(AeronInbound inbound, AeronOutbound outbound) {
-    this.onClose = MonoProcessor.create();
-    this.receive = inbound.receive();
-
-    this.disposable =
+    this.inbound = inbound.receive();
+    this.outboundDisposable =
         outbound
             .send(processor)
             .then()
@@ -43,14 +41,8 @@ public class AeronDuplexConnection implements DuplexConnection {
                 },
                 this::dispose);
 
-    this.receive
-        .doOnTerminate( // todo
-            () -> {
-              LOGGER.info("{} was terminated", this);
-              dispose();
-            })
-        .subscribe(null, th -> LOGGER.info("inbound of {} was failed with error: {}", this, th));
-
+    // todo we need to subscribe to Connection(io/out).onClose().doOnTerminate(() -> dispose()) to
+    // dispose itself
     onClose.doOnTerminate(this::dispose).subscribe();
   }
 
@@ -72,7 +64,7 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Flux<Frame> receive() {
-    return receive.map(Unpooled::wrappedBuffer).map(Frame::from).log("DuplexConn receive -> ");
+    return inbound.map(Unpooled::wrappedBuffer).map(Frame::from);
   }
 
   @Override
@@ -86,12 +78,11 @@ public class AeronDuplexConnection implements DuplexConnection {
     if (!onClose.isDisposed()) {
       onClose.onComplete();
     }
-    if (!disposable.isDisposed()) {
-      disposable.dispose();
+    if (!outboundDisposable.isDisposed()) {
+      outboundDisposable.dispose();
     }
-//    if (!processor.isDisposed()) {
-//      processor.dispose();
-//    } //todo
+
+    // todo inbound.dispose();
   }
 
   @Override

@@ -6,6 +6,7 @@ import io.rsocket.transport.ServerTransport;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 import reactor.ipc.aeron.AeronOptions;
@@ -26,56 +27,31 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
     return Mono.create(
         sink -> {
           AeronServer server = AeronServer.create("server", aeronOptions);
-          AeronServerWrapper aeronServerWrapper = new AeronServerWrapper(server);
+          // todo need to dispose of the server when we don't need it anymore,
+          // we will make it in the wrapper,
+          // also it contains a set of all serverHandlers and its disposing close all them
           server
               .newHandler(
                   (in, out) -> {
                     DuplexConnection duplexConnection = new AeronDuplexConnection(in, out);
-
-                    duplexConnection
-                        .onClose()
-                        .doOnTerminate(
-                            () -> {
-                              LOGGER.info(
-                                  "{} was disposed, dispose {}",
-                                  duplexConnection,
-                                  aeronServerWrapper);
-                              aeronServerWrapper.dispose();
-                            })
-                        .subscribe();
-
-                    aeronServerWrapper
-                        .onClose()
-                        .doOnTerminate(
-                            () -> {
-                              LOGGER.info(
-                                  "{} was disposed, dispose {}",
-                                  aeronServerWrapper,
-                                  duplexConnection);
-                              duplexConnection.dispose();
-                            })
-                        .subscribe();
-
                     return acceptor
                         .apply(duplexConnection)
                         .doOnError(
                             th -> {
                               LOGGER.warn(
-                                  "Rsocket processing of {} was finished with error: {}",
-                                  duplexConnection,
-                                  th);
-                              aeronServerWrapper.dispose();
+                                  "Acceptor didn't apply {}, reason: {}", duplexConnection, th);
+                              duplexConnection.dispose();
                             })
                         .then(duplexConnection.onClose());
                   })
               .subscribe(
-                  avoid -> {
+                  serverHandler -> {
                     LOGGER.info("AeronServer was started");
-                    sink.success(aeronServerWrapper);
+                    sink.success(new AeronServerWrapper(server, serverHandler));
                   },
                   th -> {
                     LOGGER.warn("Failed to create aeronServer: {}", th);
-                    aeronServerWrapper.dispose();
+                    // todo server.dispose();
                     sink.error(th);
                   });
         });
@@ -83,13 +59,13 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
 
   private static class AeronServerWrapper implements Closeable {
 
-    @SuppressWarnings("unused")
     private final AeronServer server;
-
+    private final Disposable serverHandler;
     private final MonoProcessor<Void> onClose = MonoProcessor.create();
 
-    private AeronServerWrapper(AeronServer server) {
+    private AeronServerWrapper(AeronServer server, Disposable serverHandler) {
       this.server = server;
+      this.serverHandler = serverHandler;
     }
 
     @Override
@@ -99,9 +75,19 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
 
     @Override
     public void dispose() {
-      if (!onClose.isDisposed()) {
+      if (!isDisposed()) {
         onClose.onComplete();
       }
+      if (!serverHandler.isDisposed()) {
+        serverHandler.dispose();
+        // serverHandler contains all (in/out) duplex connections and its disposing close all them
+      }
+      // todo server.dispose();
+    }
+
+    @Override
+    public boolean isDisposed() {
+      return onClose.isDisposed();
     }
   }
 }
