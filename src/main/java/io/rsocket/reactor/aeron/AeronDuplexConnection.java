@@ -74,14 +74,12 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public void dispose() {
-    System.err.println("DUPLEX_CONN_DISPOSE");
-    if (!onClose.isDisposed()) {
-      onClose.onComplete();
-    }
     if (!outboundDisposable.isDisposed()) {
       outboundDisposable.dispose();
     }
-
+    if (!onClose.isDisposed()) {
+      onClose.onComplete();
+    }
     // todo inbound.dispose();
   }
 

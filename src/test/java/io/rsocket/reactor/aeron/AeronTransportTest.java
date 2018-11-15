@@ -25,7 +25,7 @@ class AeronTransportTest implements TransportTest {
 
   @Override
   public Duration getTimeout() {
-    return Duration.ofMinutes(2);
+    return Duration.ofMinutes(10);
   }
 
   @Override
