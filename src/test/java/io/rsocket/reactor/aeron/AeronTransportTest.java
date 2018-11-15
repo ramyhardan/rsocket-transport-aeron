@@ -11,14 +11,10 @@ class AeronTransportTest implements TransportTest {
   private final TransportPair transportPair =
       new TransportPair<>(
           () -> InetSocketAddress.createUnresolved("localhost", 13000),
-          (address, server) -> new AeronClientTransport(options -> {
-            options.serverChannel(Channels.from(address));
-            options.clientChannel(Channels.clientChannel);
-          }),
-          (address) -> new AeronServerTransport(options -> {
-            options.serverChannel(Channels.from(address));
-          }));
-
+          (address, server) ->
+              new AeronClientTransport(options -> options.serverChannel(Channels.from(address))),
+          (address) ->
+              new AeronServerTransport(options -> options.serverChannel(Channels.from(address))));
 
   @Override
   public Duration getTimeout() {
