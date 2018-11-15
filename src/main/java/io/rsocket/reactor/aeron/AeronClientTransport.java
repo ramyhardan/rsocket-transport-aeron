@@ -37,8 +37,7 @@ public class AeronClientTransport implements ClientTransport {
                         .onClose()
                         .doOnSuccess(avoid -> LOGGER.info("{} closed", duplexConnection))
                         .doOnError(
-                            th -> LOGGER.warn("{} closed with error: {}", duplexConnection, th))
-                        .doOnTerminate(client::dispose);
+                            th -> LOGGER.warn("{} closed with error: {}", duplexConnection, th));
                   })
               .subscribe(
                   clientHandler -> {
