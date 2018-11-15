@@ -29,4 +29,12 @@ public class Channels {
         .build();
   }
 
+  public static String from(int port) {
+    return new ChannelUriStringBuilder()
+        .reliable(TRUE)
+        .media("udp")
+        .endpoint("localhost:" + port)
+        .build();
+  }
+
 }
