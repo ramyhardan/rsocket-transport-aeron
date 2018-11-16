@@ -2,6 +2,7 @@ package io.rsocket.reactor.aeron;
 
 import io.rsocket.DuplexConnection;
 import io.rsocket.transport.ClientTransport;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,40 +14,41 @@ public class AeronClientTransport implements ClientTransport {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AeronClientTransport.class);
 
-  private final Consumer<AeronClientOptions> options;
+  private final AeronClient client;
 
   public AeronClientTransport(Consumer<AeronClientOptions> options) {
-    this.options = options;
+    this.client = AeronClient.create("client", options);
   }
 
   @Override
   public Mono<DuplexConnection> connect() {
     return Mono.create(
         sink -> {
-          AeronClient client = AeronClient.create("client", options);
-          // todo need to dispose of the client when we don't need it anymore,
-          // it contains a set of all clientHandlers and its disposing close all them
+          AtomicReference<AeronDuplexConnection> connectionReference = new AtomicReference<>();
           client
               .newHandler(
-                  (inbound, outbound) -> {
-                    AeronDuplexConnection duplexConnection =
-                        new AeronDuplexConnection(inbound, outbound);
-                    LOGGER.info("{} connected", duplexConnection);
-                    sink.success(duplexConnection);
-                    return duplexConnection
+                  (in, out) -> {
+                    AeronDuplexConnection connection = new AeronDuplexConnection(in, out);
+                    connectionReference.set(connection);
+                    LOGGER.info("{} connected", connection);
+                    sink.success(connection);
+                    return connection
                         .onClose()
-                        .doOnSuccess(avoid -> LOGGER.info("{} closed", duplexConnection))
-                        .doOnError(
-                            th -> LOGGER.warn("{} closed with error: {}", duplexConnection, th));
+                        .doOnSuccess(avoid -> LOGGER.info("{} closed", connection))
+                        .doOnError(th -> LOGGER.warn("{} closed with error: {}", connection, th));
                   })
               .subscribe(
                   clientHandler -> {
-                    // todo it contains in/out, need to store and dispose when
-                    // duplexConnection will be disposed. Don't dispose client!
+                    AeronDuplexConnection connection = connectionReference.get();
+                    connection
+                        .onClose()
+                        .doOnTerminate(clientHandler::dispose)
+                        .subscribe(
+                            null,
+                            th -> LOGGER.warn("{} disposed with error: {}", clientHandler, th));
                   },
                   th -> {
-                    LOGGER.warn("Failed to create client or connect duplexConnection: {}", th);
-                    client.dispose();
+                    LOGGER.warn("Failed to create client or connect connection: {}", th);
                     sink.error(th);
                   });
         });
