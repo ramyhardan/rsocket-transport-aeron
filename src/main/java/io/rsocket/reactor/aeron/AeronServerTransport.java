@@ -27,9 +27,6 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
     return Mono.create(
         sink -> {
           AeronServer server = AeronServer.create("server", aeronOptions);
-          // todo need to dispose of the server when we don't need it anymore,
-          // we will make it in the wrapper,
-          // also it contains a set of all serverHandlers and its disposing close all them
           server
               .newHandler(
                   (in, out) -> {
@@ -38,7 +35,7 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
                         .apply(duplexConnection)
                         .doOnError(
                             th -> {
-                              LOGGER.warn(
+                              LOGGER.error(
                                   "Acceptor didn't apply {}, reason: {}", duplexConnection, th);
                               duplexConnection.dispose();
                             })
@@ -46,12 +43,11 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
                   })
               .subscribe(
                   serverHandler -> {
-                    LOGGER.info("AeronServer was started");
-                    sink.success(new AeronServerWrapper(server, serverHandler));
+                    LOGGER.info("AeronServer started");
+                    sink.success(new AeronServerWrapper(serverHandler));
                   },
                   th -> {
-                    LOGGER.warn("Failed to create aeronServer: {}", th);
-                    // todo server.dispose();
+                    LOGGER.error("Failed to create aeronServer: {}", th);
                     sink.error(th);
                   });
         });
@@ -59,12 +55,10 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
 
   private static class AeronServerWrapper implements Closeable {
 
-    private final AeronServer server;
     private final Disposable serverHandler;
     private final MonoProcessor<Void> onClose = MonoProcessor.create();
 
-    private AeronServerWrapper(AeronServer server, Disposable serverHandler) {
-      this.server = server;
+    private AeronServerWrapper(Disposable serverHandler) {
       this.serverHandler = serverHandler;
     }
 
@@ -80,9 +74,7 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
       }
       if (!serverHandler.isDisposed()) {
         serverHandler.dispose();
-        // serverHandler contains all (in/out) duplex connections and its disposing close all them
       }
-      // todo server.dispose();
     }
 
     @Override
