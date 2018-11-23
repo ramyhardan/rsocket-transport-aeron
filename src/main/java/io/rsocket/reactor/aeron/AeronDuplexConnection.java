@@ -1,7 +1,8 @@
 package io.rsocket.reactor.aeron;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 import io.rsocket.DuplexConnection;
 import io.rsocket.Frame;
 import java.nio.ByteBuffer;
@@ -32,7 +33,7 @@ public class AeronDuplexConnection implements DuplexConnection {
             .subscribe(
                 null,
                 th -> {
-                  LOGGER.info("outbound of {} was failed with error: {}", this, th);
+                  LOGGER.warn("outbound of {} was failed with error: {}", this, th);
                   dispose();
                 },
                 this::dispose);
@@ -44,8 +45,12 @@ public class AeronDuplexConnection implements DuplexConnection {
         sink ->
             Flux.from(frames)
                 .log("DuplexConn send -> ")
-                .map(Frame::content)
-                .map(ByteBuf::nioBuffer)
+                .map(
+                    frame -> {
+                      ByteBuffer buffer = frame.content().nioBuffer();
+                      ReferenceCountUtil.safeRelease(frame);
+                      return buffer;
+                    })
                 .subscribe(processor::onNext, sink::error, sink::success));
   }
 
@@ -56,7 +61,16 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Flux<Frame> receive() {
-    return connection.inbound().receive().map(Unpooled::wrappedBuffer).map(Frame::from);
+    return connection
+        .inbound()
+        .receive()
+        .map(
+            buffer -> {
+              ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(buffer.capacity());
+              byteBuf.writeBytes(buffer);
+              return byteBuf;
+            })
+        .map(Frame::from);
   }
 
   @Override
