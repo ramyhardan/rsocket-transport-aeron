@@ -44,7 +44,6 @@ public class AeronDuplexConnection implements DuplexConnection {
     return Mono.create(
         sink ->
             Flux.from(frames)
-                .log("DuplexConn send -> ")
                 .map(
                     frame -> {
                       ByteBuffer buffer = frame.content().nioBuffer();

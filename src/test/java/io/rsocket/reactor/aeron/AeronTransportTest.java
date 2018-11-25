@@ -1,5 +1,7 @@
 package io.rsocket.reactor.aeron;
 
+import static io.aeron.driver.Configuration.TERM_BUFFER_LENGTH_DEFAULT;
+
 import io.rsocket.test.TransportTest;
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -12,6 +14,11 @@ import reactor.aeron.server.AeronServer;
 class AeronTransportTest implements TransportTest {
 
   private static AtomicInteger portCounter = new AtomicInteger(12000);
+
+  static {
+    // fixme workaround wait for backpressure support
+    System.setProperty("aeron.term.buffer.length", String.valueOf(2 * TERM_BUFFER_LENGTH_DEFAULT));
+  }
 
   private volatile AeronResources aeronResources;
 
