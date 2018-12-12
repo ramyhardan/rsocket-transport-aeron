@@ -15,7 +15,8 @@ public class RsocketServerRunner {
 
   public static void main(String[] args) throws Exception {
 
-    try (AeronResources aeronResources = AeronResources.start()) {
+    AeronResources aeronResources = AeronResources.start();
+    try {
       // start server
       RSocketFactory.receive()
           .acceptor(
@@ -69,6 +70,9 @@ public class RsocketServerRunner {
 
       System.err.println("wait for the end");
       Thread.currentThread().join();
+    } finally {
+      aeronResources.dispose();
+      aeronResources.onDispose().block();
     }
   }
 }

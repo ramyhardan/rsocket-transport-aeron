@@ -21,7 +21,7 @@
   </scm>
 
   <properties>
-    <scalecube-reactor-aeron.version>0.0.4</scalecube-reactor-aeron.version>
+    <scalecube-reactor-aeron.version>0.0.6</scalecube-reactor-aeron.version>
     <reactor-core.version>3.2.2.RELEASE</reactor-core.version>
     <reactivestreams.version>1.0.2</reactivestreams.version>
     <rsocket.version>0.11.11</rsocket.version>
@@ -33,6 +33,7 @@
     <hamcrest-all.version>1.3</hamcrest-all.version>
     <hamcrest-core.version>1.3</hamcrest-core.version>
     <checkstyle.skip>true</checkstyle.skip>
+    <!--<enforcer.skip>true</enforcer.skip>-->
   </properties>
 
   <dependencies>
@@ -50,6 +51,22 @@
         <exclusion>
           <groupId>org.slf4j</groupId>
           <artifactId>slf4j-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.projectreactor</groupId>
+          <artifactId>reactor-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>io.projectreactor.addons</groupId>
+      <artifactId>reactor-extra</artifactId>
+      <version>3.2.0.RELEASE</version>
+      <exclusions>
+        <exclusion>
+          <groupId>io.projectreactor</groupId>
+          <artifactId>reactor-core</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
