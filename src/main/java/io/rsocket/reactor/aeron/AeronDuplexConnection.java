@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.aeron.Connection;
 import reactor.core.Disposable;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -19,43 +18,34 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AeronDuplexConnection.class);
 
-  private final EmitterProcessor<ByteBuffer> processor = EmitterProcessor.create();
   private final Connection connection;
-  private final Disposable outboundDisposable;
+  private final Disposable channelClosed;
 
   public AeronDuplexConnection(Connection connection) {
     this.connection = connection;
-    this.outboundDisposable =
+    channelClosed =
         connection
-            .outbound()
-            .send(processor)
-            .then()
-            .subscribe(
-                null,
-                th -> {
-                  LOGGER.warn("outbound of {} was failed with error: {}", this, th);
-                  dispose();
-                },
-                this::dispose);
+            .onDispose()
+            .doFinally(
+                s -> {
+                  if (!isDisposed()) {
+                    dispose();
+                  }
+                })
+            .subscribe();
   }
 
   @Override
   public Mono<Void> send(Publisher<Frame> frames) {
-    return Mono.create(
-        sink ->
-            Flux.from(frames)
-                .map(
-                    frame -> {
-                      ByteBuffer buffer = frame.content().nioBuffer();
-                      ReferenceCountUtil.safeRelease(frame);
-                      return buffer;
-                    })
-                .subscribe(processor::onNext, sink::error, sink::success));
-  }
-
-  @Override
-  public Mono<Void> sendOne(Frame frame) {
-    return send(Mono.just(frame));
+    return Flux.from(frames)
+        .map(
+            frame -> {
+              ByteBuffer buffer = frame.content().nioBuffer();
+              ReferenceCountUtil.safeRelease(frame);
+              return buffer;
+            })
+        .flatMap(buffer -> connection.outbound().send(Mono.just(buffer)).then())
+        .then();
   }
 
   @Override
@@ -74,12 +64,18 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Mono<Void> onClose() {
-    return connection.onDispose();
+    return connection
+        .onDispose()
+        .doFinally(
+            s -> {
+              if (!channelClosed.isDisposed()) {
+                channelClosed.dispose();
+              }
+            });
   }
 
   @Override
   public void dispose() {
-    outboundDisposable.dispose();
     connection.dispose();
   }
 
