@@ -48,7 +48,7 @@ public class RsocketServerRunner {
                         public Mono<Payload> requestResponse(Payload payload) {
                           System.err.println(
                               "requestResponse(), receive request: " + payload.getDataUtf8());
-                          return super.requestResponse(payload);
+                          return Mono.just(payload);
                         }
 
                         @Override

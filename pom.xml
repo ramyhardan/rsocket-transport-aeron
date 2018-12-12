@@ -21,10 +21,10 @@
   </scm>
 
   <properties>
-    <scalecube-reactor-aeron.version>0.0.6</scalecube-reactor-aeron.version>
+    <scalecube-reactor-aeron.version>0.0.6-SNAPSHOT</scalecube-reactor-aeron.version>
     <reactor-core.version>3.2.2.RELEASE</reactor-core.version>
     <reactivestreams.version>1.0.2</reactivestreams.version>
-    <rsocket.version>0.11.13</rsocket.version>
+    <rsocket.version>0.11.11</rsocket.version>
 
     <slf4j.version>1.7.7</slf4j.version>
     <log4j.version>2.11.0</log4j.version>
