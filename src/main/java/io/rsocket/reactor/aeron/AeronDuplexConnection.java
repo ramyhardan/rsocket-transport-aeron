@@ -41,11 +41,11 @@ public class AeronDuplexConnection implements DuplexConnection {
         .map(
             frame -> {
               ByteBuffer buffer = frame.content().nioBuffer();
-              ByteBuffer buffer1 = ByteBuffer.allocateDirect(buffer.capacity());
-              buffer1.put(buffer);
-              buffer1.flip();
+              ByteBuffer bufferCopy = ByteBuffer.allocateDirect(buffer.capacity());
+              bufferCopy.put(buffer);
+              bufferCopy.flip();
               ReferenceCountUtil.safeRelease(frame);
-              return buffer1;
+              return bufferCopy;
             })
         .flatMap(buffer -> connection.outbound().send(Mono.just(buffer)).then())
         .then();

@@ -2,7 +2,7 @@ package io.rsocket.reactor.aeron;
 
 import io.rsocket.Payload;
 import io.rsocket.RSocketFactory;
-import io.rsocket.util.DefaultPayload;
+import io.rsocket.util.ByteBufPayload;
 import reactor.aeron.AeronResources;
 import reactor.aeron.client.AeronClient;
 import reactor.core.publisher.Flux;
@@ -31,22 +31,11 @@ public class RsocketClientRunner {
               rSocket -> {
                 System.err.println("start " + rSocket);
 
-                //                rSocket
-                //                    .requestStream(DefaultPayload.create("Hello"))
-                //                    .log("receive ")
-                //                    .map(Payload::getDataUtf8)
-                //                    .doOnNext(System.out::println)
-                //                    .take(10)
-                //                    .then()
-                //                    .doFinally(signalType -> rSocket.dispose())
-                //                    .then()
-                //                    .subscribe();
-
                 Flux.range(0, 1000)
                     .flatMap(
                         i ->
                             rSocket
-                                .requestResponse(DefaultPayload.create("Hello_" + i))
+                                .requestResponse(ByteBufPayload.create("Hello_" + i))
                                 .log("receive ")
                                 .map(Payload::getDataUtf8)
                                 .doOnNext(System.out::println)
