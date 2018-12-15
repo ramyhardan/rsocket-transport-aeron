@@ -21,7 +21,7 @@
   </scm>
 
   <properties>
-    <scalecube-reactor-aeron.version>0.0.4</scalecube-reactor-aeron.version>
+    <scalecube-reactor-aeron.version>0.0.8</scalecube-reactor-aeron.version>
     <reactor-core.version>3.2.2.RELEASE</reactor-core.version>
     <reactivestreams.version>1.0.2</reactivestreams.version>
     <rsocket.version>0.11.11</rsocket.version>
@@ -50,6 +50,22 @@
         <exclusion>
           <groupId>org.slf4j</groupId>
           <artifactId>slf4j-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.projectreactor</groupId>
+          <artifactId>reactor-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>io.projectreactor.addons</groupId>
+      <artifactId>reactor-extra</artifactId>
+      <version>3.2.0.RELEASE</version>
+      <exclusions>
+        <exclusion>
+          <groupId>io.projectreactor</groupId>
+          <artifactId>reactor-core</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
