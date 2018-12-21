@@ -49,7 +49,8 @@ class AeronTransportTest implements TransportTest {
   @AfterEach
   void tearDown() {
     if (aeronResources != null) {
-      aeronResources.close();
+      aeronResources.dispose();
+      aeronResources.onDispose().block();
     }
   }
 

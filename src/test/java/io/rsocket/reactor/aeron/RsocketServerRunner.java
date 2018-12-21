@@ -3,7 +3,7 @@ package io.rsocket.reactor.aeron;
 import io.rsocket.AbstractRSocket;
 import io.rsocket.Payload;
 import io.rsocket.RSocketFactory;
-import io.rsocket.util.DefaultPayload;
+import io.rsocket.util.ByteBufPayload;
 import java.time.Duration;
 import org.reactivestreams.Publisher;
 import reactor.aeron.AeronResources;
@@ -15,7 +15,8 @@ public class RsocketServerRunner {
 
   public static void main(String[] args) throws Exception {
 
-    try (AeronResources aeronResources = AeronResources.start()) {
+    AeronResources aeronResources = AeronResources.start();
+    try {
       // start server
       RSocketFactory.receive()
           .acceptor(
@@ -47,7 +48,7 @@ public class RsocketServerRunner {
                         public Mono<Payload> requestResponse(Payload payload) {
                           System.err.println(
                               "requestResponse(), receive request: " + payload.getDataUtf8());
-                          return super.requestResponse(payload);
+                          return Mono.just(payload);
                         }
 
                         @Override
@@ -56,7 +57,7 @@ public class RsocketServerRunner {
                               "requestStream(), receive request: " + payload.getDataUtf8());
                           return Flux.interval(Duration.ofMillis(100))
                               .log("send back ")
-                              .map(aLong -> DefaultPayload.create("Interval: " + aLong));
+                              .map(aLong -> ByteBufPayload.create("Interval: " + aLong));
                         }
                       }))
           .transport(
@@ -69,6 +70,9 @@ public class RsocketServerRunner {
 
       System.err.println("wait for the end");
       Thread.currentThread().join();
+    } finally {
+      aeronResources.dispose();
+      aeronResources.onDispose().block();
     }
   }
 }
