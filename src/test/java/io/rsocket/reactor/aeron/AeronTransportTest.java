@@ -26,11 +26,16 @@ class AeronTransportTest implements TransportTest {
                           options -> {
                             options.serverChannel(Channels.from(address));
                             options.clientChannel(Channels.from(portCounter.incrementAndGet()));
+                            options.backpressureTimeout(Duration.ofSeconds(10));
                           })),
           (address) ->
               new AeronServerTransport(
                   AeronServer.create(aeronResources)
-                      .options(options -> options.serverChannel(Channels.from(address)))));
+                      .options(
+                          options -> {
+                            options.serverChannel(Channels.from(address));
+                            options.backpressureTimeout(Duration.ofSeconds(10));
+                          })));
 
   @BeforeAll
   static void beforeAll() {
