@@ -1,7 +1,5 @@
 package io.rsocket.reactor.aeron;
 
-import io.aeron.CommonContext;
-import io.aeron.driver.Configuration;
 import io.rsocket.test.TransportTest;
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -49,7 +47,7 @@ class AeronTransportTest implements TransportTest {
 
   @Override
   public Duration getTimeout() {
-    return Duration.ofSeconds(10);
+    return Duration.ofMinutes(1);
   }
 
   @Override
