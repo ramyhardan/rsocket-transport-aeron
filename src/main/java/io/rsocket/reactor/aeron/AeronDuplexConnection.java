@@ -7,16 +7,12 @@ import io.rsocket.DuplexConnection;
 import io.rsocket.Frame;
 import java.nio.ByteBuffer;
 import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.aeron.Connection;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public class AeronDuplexConnection implements DuplexConnection {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(AeronDuplexConnection.class);
 
   private final Connection connection;
   private final Disposable channelClosed;
@@ -37,17 +33,19 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Mono<Void> send(Publisher<Frame> frames) {
-    return Flux.from(frames)
-        .map(
-            frame -> {
-              ByteBuffer buffer = frame.content().nioBuffer();
-              ByteBuffer bufferCopy = ByteBuffer.allocateDirect(buffer.capacity());
-              bufferCopy.put(buffer);
-              bufferCopy.flip();
-              ReferenceCountUtil.safeRelease(frame);
-              return bufferCopy;
-            })
-        .flatMap(buffer -> connection.outbound().send(Mono.just(buffer)).then())
+    return connection
+        .outbound()
+        .send(
+            Flux.from(frames)
+                .map(
+                    frame -> {
+                      ByteBuffer buffer = frame.content().nioBuffer();
+                      ByteBuffer bufferCopy = ByteBuffer.allocate(buffer.capacity());
+                      bufferCopy.put(buffer);
+                      bufferCopy.flip();
+                      ReferenceCountUtil.safeRelease(frame);
+                      return bufferCopy;
+                    }))
         .then();
   }
 
