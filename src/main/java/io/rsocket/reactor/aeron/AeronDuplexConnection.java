@@ -8,27 +8,15 @@ import io.rsocket.Frame;
 import java.nio.ByteBuffer;
 import org.reactivestreams.Publisher;
 import reactor.aeron.Connection;
-import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public class AeronDuplexConnection implements DuplexConnection {
 
   private final Connection connection;
-  private final Disposable channelClosed;
 
   public AeronDuplexConnection(Connection connection) {
     this.connection = connection;
-    channelClosed =
-        connection
-            .onDispose()
-            .doFinally(
-                s -> {
-                  if (!isDisposed()) {
-                    dispose();
-                  }
-                })
-            .subscribe();
   }
 
   @Override
@@ -40,7 +28,7 @@ public class AeronDuplexConnection implements DuplexConnection {
                 .map(
                     frame -> {
                       ByteBuffer buffer = frame.content().nioBuffer();
-                      ByteBuffer bufferCopy = ByteBuffer.allocate(buffer.capacity());
+                      ByteBuffer bufferCopy = ByteBuffer.allocate(buffer.remaining());
                       bufferCopy.put(buffer);
                       bufferCopy.flip();
                       ReferenceCountUtil.safeRelease(frame);
@@ -56,7 +44,7 @@ public class AeronDuplexConnection implements DuplexConnection {
         .receive()
         .map(
             buffer -> {
-              ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(buffer.capacity());
+              ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(buffer.remaining());
               byteBuf.writeBytes(buffer);
               return byteBuf;
             })
@@ -65,14 +53,7 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Mono<Void> onClose() {
-    return connection
-        .onDispose()
-        .doFinally(
-            s -> {
-              if (!channelClosed.isDisposed()) {
-                channelClosed.dispose();
-              }
-            });
+    return connection.onDispose();
   }
 
   @Override
