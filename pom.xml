@@ -21,7 +21,7 @@
   </scm>
 
   <properties>
-    <scalecube-reactor-aeron.version>0.0.12</scalecube-reactor-aeron.version>
+    <scalecube-reactor-aeron.version>0.0.13</scalecube-reactor-aeron.version>
     <reactor-core.version>3.2.3.RELEASE</reactor-core.version>
     <reactivestreams.version>1.0.2</reactivestreams.version>
     <rsocket.version>0.11.11</rsocket.version>
