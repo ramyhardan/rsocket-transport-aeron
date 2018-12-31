@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import reactor.aeron.AeronResources;
+import reactor.aeron.AeronResourcesConfig;
 import reactor.aeron.client.AeronClient;
 import reactor.aeron.server.AeronServer;
 
@@ -39,7 +40,7 @@ class AeronTransportTest implements TransportTest {
 
   @BeforeAll
   static void beforeAll() {
-    aeronResources = AeronResources.start();
+    aeronResources = AeronResources.start(AeronResourcesConfig.builder().numOfWorkers(1).build());
   }
 
   @AfterAll
