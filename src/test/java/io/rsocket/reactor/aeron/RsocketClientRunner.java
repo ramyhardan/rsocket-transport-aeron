@@ -19,12 +19,7 @@ public class RsocketClientRunner {
           .transport(
               () ->
                   new AeronClientTransport(
-                      AeronClient.create(aeronResources)
-                          .options(
-                              options -> {
-                                options.serverChannel(Channels.serverChannel);
-                                options.clientChannel(Channels.clientChannel);
-                              })))
+                      AeronClient.create(aeronResources).options("localhost", 12000, 12001)))
           .start()
           .log("client connect() ")
           .subscribe(

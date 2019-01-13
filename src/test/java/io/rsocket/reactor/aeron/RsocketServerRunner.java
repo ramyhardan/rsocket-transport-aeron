@@ -63,8 +63,7 @@ public class RsocketServerRunner {
           .transport(
               () ->
                   new AeronServerTransport(
-                      AeronServer.create(aeronResources)
-                          .options(options -> options.serverChannel(Channels.serverChannel))))
+                      AeronServer.create(aeronResources).options("localhost", 12000, 12001)))
           .start()
           .subscribe();
 

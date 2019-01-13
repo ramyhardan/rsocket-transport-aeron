@@ -21,34 +21,15 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Mono<Void> send(Publisher<Frame> frames) {
-    return connection
-        .outbound()
-        .send(
-            Flux.from(frames)
-                .map(
-                    frame -> {
-                      ByteBuffer buffer = frame.content().nioBuffer();
-                      ByteBuffer bufferCopy = ByteBuffer.allocate(buffer.remaining());
-                      bufferCopy.put(buffer);
-                      bufferCopy.flip();
-                      ReferenceCountUtil.safeRelease(frame);
-                      return bufferCopy;
-                    }))
-        .then();
+    if (frames instanceof Mono) {
+      return connection.outbound().send(Mono.from(frames).map(this::toByteBuffer)).then();
+    }
+    return connection.outbound().send(Flux.from(frames).map(this::toByteBuffer)).then();
   }
 
   @Override
   public Flux<Frame> receive() {
-    return connection
-        .inbound()
-        .receive()
-        .map(
-            buffer -> {
-              ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(buffer.remaining());
-              byteBuf.writeBytes(buffer);
-              return byteBuf;
-            })
-        .map(Frame::from);
+    return connection.inbound().receive().map(this::toFrame);
   }
 
   @Override
@@ -64,5 +45,20 @@ public class AeronDuplexConnection implements DuplexConnection {
   @Override
   public boolean isDisposed() {
     return connection.isDisposed();
+  }
+
+  private ByteBuffer toByteBuffer(Frame frame) {
+    ByteBuffer buffer = frame.content().nioBuffer();
+    ByteBuffer bufferCopy = ByteBuffer.allocate(buffer.remaining());
+    bufferCopy.put(buffer);
+    bufferCopy.flip();
+    ReferenceCountUtil.safeRelease(frame);
+    return bufferCopy;
+  }
+
+  private Frame toFrame(ByteBuffer buffer) {
+    ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(buffer.remaining());
+    byteBuf.writeBytes(buffer);
+    return Frame.from(byteBuf);
   }
 }
