@@ -4,7 +4,7 @@ import io.rsocket.Payload;
 import io.rsocket.RSocketFactory;
 import io.rsocket.util.ByteBufPayload;
 import reactor.aeron.AeronResources;
-import reactor.aeron.client.AeronClient;
+import reactor.aeron.AeronClient;
 import reactor.core.publisher.Flux;
 
 public class RsocketClientRunner {
@@ -19,12 +19,7 @@ public class RsocketClientRunner {
           .transport(
               () ->
                   new AeronClientTransport(
-                      AeronClient.create(aeronResources)
-                          .options(
-                              options -> {
-                                options.serverChannel(Channels.serverChannel);
-                                options.clientChannel(Channels.clientChannel);
-                              })))
+                      AeronClient.create(aeronResources).options("localhost", 12000, 12001)))
           .start()
           .log("client connect() ")
           .subscribe(

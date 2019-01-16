@@ -3,7 +3,7 @@ package io.rsocket.reactor.aeron;
 import io.rsocket.Closeable;
 import io.rsocket.transport.ServerTransport;
 import reactor.aeron.OnDisposable;
-import reactor.aeron.server.AeronServer;
+import reactor.aeron.AeronServer;
 import reactor.core.publisher.Mono;
 
 public class AeronServerTransport implements ServerTransport<Closeable> {
