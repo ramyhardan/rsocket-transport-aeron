@@ -8,8 +8,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import reactor.aeron.AeronResources;
 import reactor.aeron.AeronResourcesConfig;
-import reactor.aeron.client.AeronClient;
-import reactor.aeron.server.AeronServer;
+import reactor.aeron.AeronClient;
+import reactor.aeron.AeronServer;
 
 class AeronTransportTest implements TransportTest {
 

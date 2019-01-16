@@ -4,7 +4,7 @@ import io.rsocket.Payload;
 import io.rsocket.RSocketFactory;
 import io.rsocket.util.ByteBufPayload;
 import reactor.aeron.AeronResources;
-import reactor.aeron.client.AeronClient;
+import reactor.aeron.AeronClient;
 import reactor.core.publisher.Flux;
 
 public class RsocketClientRunner {

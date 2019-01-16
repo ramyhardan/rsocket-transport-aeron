@@ -7,15 +7,15 @@ import io.rsocket.DuplexConnection;
 import io.rsocket.Frame;
 import java.nio.ByteBuffer;
 import org.reactivestreams.Publisher;
-import reactor.aeron.Connection;
+import reactor.aeron.AeronConnection;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public class AeronDuplexConnection implements DuplexConnection {
 
-  private final Connection connection;
+  private final AeronConnection connection;
 
-  public AeronDuplexConnection(Connection connection) {
+  public AeronDuplexConnection(AeronConnection connection) {
     this.connection = connection;
   }
 

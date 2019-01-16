@@ -2,7 +2,7 @@ package io.rsocket.reactor.aeron;
 
 import io.rsocket.DuplexConnection;
 import io.rsocket.transport.ClientTransport;
-import reactor.aeron.client.AeronClient;
+import reactor.aeron.AeronClient;
 import reactor.core.publisher.Mono;
 
 public class AeronClientTransport implements ClientTransport {

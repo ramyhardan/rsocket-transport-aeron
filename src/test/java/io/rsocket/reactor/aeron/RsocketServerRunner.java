@@ -7,7 +7,7 @@ import io.rsocket.util.ByteBufPayload;
 import java.time.Duration;
 import org.reactivestreams.Publisher;
 import reactor.aeron.AeronResources;
-import reactor.aeron.server.AeronServer;
+import reactor.aeron.AeronServer;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
