@@ -4,7 +4,7 @@
   <parent>
     <groupId>io.scalecube</groupId>
     <artifactId>scalecube-parent-pom</artifactId>
-    <version>0.0.15</version>
+    <version>0.0.17</version>
   </parent>
 
   <artifactId>rsocket-transport-aeron</artifactId>
@@ -21,8 +21,8 @@
   </scm>
 
   <properties>
-    <scalecube-reactor-aeron.version>0.0.10</scalecube-reactor-aeron.version>
-    <reactor-core.version>3.2.2.RELEASE</reactor-core.version>
+    <scalecube-reactor-aeron.version>0.1.0</scalecube-reactor-aeron.version>
+    <reactor-core.version>3.2.3.RELEASE</reactor-core.version>
     <reactivestreams.version>1.0.2</reactivestreams.version>
     <rsocket.version>0.11.11</rsocket.version>
 

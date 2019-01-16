@@ -21,6 +21,8 @@ import reactor.test.StepVerifier;
 
 public interface TransportTest {
 
+  Duration TIMEOUT = Duration.ofSeconds(5);
+
   @AfterEach
   default void close() {
     getTransportPair().dispose();
@@ -124,7 +126,7 @@ public interface TransportTest {
   }
 
   @DisplayName("makes 1 requestChannel request with 2,000,000 payloads")
-  @SlowTest
+  @Test
   default void requestChannel2_000_000() {
     Flux<Payload> payloads = Flux.range(0, 2_000_000).map(this::createTestPayload);
 
@@ -263,14 +265,14 @@ public interface TransportTest {
               .acceptor((setup, sendingSocket) -> Mono.just(new TestRSocket()))
               .transport(serverTransportSupplier.apply(address))
               .start()
-              .block();
+              .block(TIMEOUT);
 
       client =
           RSocketFactory.connect()
               .transport(clientTransportSupplier.apply(address, server))
               .start()
               .doOnError(Throwable::printStackTrace)
-              .block();
+              .block(TIMEOUT);
     }
 
     @Override
