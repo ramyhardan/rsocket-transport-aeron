@@ -21,10 +21,12 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Mono<Void> send(Publisher<Frame> frames) {
-    if (frames instanceof Mono) {
-      return connection.outbound().send(Mono.from(frames).map(this::toByteBuffer)).then();
-    }
     return connection.outbound().send(Flux.from(frames).map(this::toByteBuffer)).then();
+  }
+
+  @Override
+  public Mono<Void> sendOne(Frame frame) {
+    return connection.outbound().send(Mono.just(frame).map(this::toByteBuffer)).then();
   }
 
   @Override
