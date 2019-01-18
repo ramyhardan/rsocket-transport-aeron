@@ -19,7 +19,6 @@ public final class AeronPongServer {
     AeronResources aeronResources = AeronResources.start();
 
     try {
-
       RSocketFactory.receive()
           .frameDecoder(Frame::retain)
           .acceptor(new PingHandler())
@@ -49,7 +48,7 @@ public final class AeronPongServer {
 
     @Override
     public Mono<RSocket> accept(ConnectionSetupPayload setup, RSocket sendingSocket) {
-      setup.release();
+      // setup.release();
       return Mono.just(
           new AbstractRSocket() {
             @Override

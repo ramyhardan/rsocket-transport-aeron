@@ -9,34 +9,33 @@ import java.time.Duration;
 import org.HdrHistogram.Recorder;
 import reactor.aeron.AeronClient;
 import reactor.aeron.AeronResources;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 public final class AeronPingClient {
 
   public static void main(String... args) {
+    int count = 1_000_000_000;
+
     AeronResources aeronResources = AeronResources.start();
 
     try {
-
-      Mono<RSocket> client =
-          RSocketFactory.connect()
-              .frameDecoder(Frame::retain)
-              .transport(
+      RSocketFactory.connect()
+          .frameDecoder(Frame::retain)
+          .transport(
+              () ->
                   new AeronClientTransport(
                       AeronClient.create(aeronResources).options("localhost", 12000, 12001)))
-              .start();
-
-      PingClient pingClient = new PingClient(client);
-
-      Recorder recorder = pingClient.startTracker(Duration.ofSeconds(1));
-
-      int count = 1_000_000_000;
-
-      pingClient
-          .startPingPong(count, recorder)
+          .start()
+          .log("client connect() ")
+          .flatMapMany(
+              rsocket -> {
+                PingClient pingClient = new PingClient();
+                return pingClient.startPingPong(rsocket, count).doFinally(s -> pingClient.close());
+              })
           .doOnTerminate(() -> System.out.println("Sent " + count + " messages."))
           .blockLast();
+
     } finally {
       aeronResources.dispose();
       aeronResources.onDispose().block();
@@ -45,47 +44,49 @@ public final class AeronPingClient {
 
   private static class PingClient {
 
+    private static final Duration REPORT_INTERVAL = Duration.ofSeconds(1);
+
+    private final Recorder histogram;
+
     private final Payload payload;
-    private final Mono<RSocket> client;
+    private final Disposable reportDisposable;
 
-    private PingClient(Mono<RSocket> client) {
-      this.client = client;
+    private PingClient() {
       this.payload = ByteBufPayload.create("hello");
+
+      this.histogram = new Recorder(3600000000000L, 3);
+      this.reportDisposable =
+          Flux.interval(REPORT_INTERVAL)
+              .doOnNext(
+                  aLong -> {
+                    System.out.println("---- PING/ PONG HISTO ----");
+                    histogram
+                        .getIntervalHistogram()
+                        .outputPercentileDistribution(System.out, 5, 1000.0, false);
+                    System.out.println("---- PING/ PONG HISTO ----");
+                  })
+              .subscribe();
     }
 
-    private Recorder startTracker(Duration interval) {
-      final Recorder histogram = new Recorder(3600000000000L, 3);
-      Flux.interval(interval)
-          .doOnNext(
-              aLong -> {
-                System.out.println("---- PING/ PONG HISTO ----");
-                histogram
-                    .getIntervalHistogram()
-                    .outputPercentileDistribution(System.out, 5, 1000.0, false);
-                System.out.println("---- PING/ PONG HISTO ----");
-              })
-          .subscribe();
-      return histogram;
+    private void close() {
+      reportDisposable.dispose();
     }
 
-    private Flux<Payload> startPingPong(int count, final Recorder histogram) {
-      return client
-          .flatMapMany(
-              rsocket ->
-                  Flux.range(1, count)
-                      .flatMap(
-                          i -> {
-                            long start = System.nanoTime();
-                            return rsocket
-                                .requestResponse(payload.retain())
-                                .doOnNext(Payload::release)
-                                .doFinally(
-                                    signalType -> {
-                                      long diff = System.nanoTime() - start;
-                                      histogram.recordValue(diff);
-                                    });
-                          },
-                          64))
+    private Flux<Payload> startPingPong(RSocket rsocket, int count) {
+      return Flux.range(1, count)
+          .flatMap(
+              i -> {
+                long start = System.nanoTime();
+                return rsocket
+                    .requestResponse(payload.retain())
+                    .doOnNext(Payload::release)
+                    .doFinally(
+                        signalType -> {
+                          long diff = System.nanoTime() - start;
+                          histogram.recordValue(diff);
+                        });
+              },
+              64)
           .doOnError(Throwable::printStackTrace);
     }
   }
