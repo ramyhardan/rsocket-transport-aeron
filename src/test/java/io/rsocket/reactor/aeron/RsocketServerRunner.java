@@ -15,7 +15,7 @@ public class RsocketServerRunner {
 
   public static void main(String[] args) throws Exception {
 
-    AeronResources aeronResources = AeronResources.start();
+    AeronResources aeronResources = new AeronResources().useTmpDir().singleWorker().start().block();
     try {
       // start server
       RSocketFactory.receive()

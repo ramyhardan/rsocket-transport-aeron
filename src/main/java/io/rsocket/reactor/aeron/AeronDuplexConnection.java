@@ -1,11 +1,12 @@
 package io.rsocket.reactor.aeron;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 import io.rsocket.DuplexConnection;
 import io.rsocket.Frame;
 import java.nio.ByteBuffer;
+import org.agrona.DirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.reactivestreams.Publisher;
 import reactor.aeron.AeronConnection;
 import reactor.core.publisher.Flux;
@@ -21,12 +22,12 @@ public class AeronDuplexConnection implements DuplexConnection {
 
   @Override
   public Mono<Void> send(Publisher<Frame> frames) {
-    return connection.outbound().send(Flux.from(frames).map(this::toByteBuffer)).then();
+    return connection.outbound().send(Flux.from(frames).map(this::toBuffer)).then();
   }
 
   @Override
   public Mono<Void> sendOne(Frame frame) {
-    return connection.outbound().send(Mono.just(frame).map(this::toByteBuffer)).then();
+    return connection.outbound().send(Mono.just(frame).map(this::toBuffer)).then();
   }
 
   @Override
@@ -49,18 +50,20 @@ public class AeronDuplexConnection implements DuplexConnection {
     return connection.isDisposed();
   }
 
-  private ByteBuffer toByteBuffer(Frame frame) {
+  private DirectBuffer toBuffer(Frame frame) {
     ByteBuffer buffer = frame.content().nioBuffer();
     ByteBuffer bufferCopy = ByteBuffer.allocate(buffer.remaining());
     bufferCopy.put(buffer);
     bufferCopy.flip();
     ReferenceCountUtil.safeRelease(frame);
-    return bufferCopy;
+    // todo temporary
+    return new UnsafeBuffer(bufferCopy);
   }
 
-  private Frame toFrame(ByteBuffer buffer) {
-    ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(buffer.remaining());
-    byteBuf.writeBytes(buffer);
-    return Frame.from(byteBuf);
+  private Frame toFrame(DirectBuffer buffer) {
+    // todo temporary
+    byte[] bytes = new byte[buffer.capacity()];
+    buffer.getBytes(0, bytes);
+    return Frame.from(Unpooled.wrappedBuffer(bytes));
   }
 }
