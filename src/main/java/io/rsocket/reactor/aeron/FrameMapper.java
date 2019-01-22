@@ -36,12 +36,11 @@ class FrameMapper implements DirectBufferHandler<Frame>, Function<DirectBuffer, 
 
   @Override
   public Frame apply(DirectBuffer source) {
-    ByteBuf destination = byteBufAllocator.buffer(source.capacity());
-
-    ByteBuf temp = Unpooled.wrappedBuffer(source.addressOffset(), source.capacity(), false);
-
-    destination.writeBytes(temp, source.capacity());
-
-    return Frame.from(destination);
+    // todo select one way
+    //    ByteBuf destination = byteBufAllocator.buffer(source.capacity());
+    //    ByteBuf temp = Unpooled.wrappedBuffer(source.addressOffset(), source.capacity(), false);
+    //    destination.writeBytes(temp, source.capacity());
+    //    return Frame.from(destination);
+    return Frame.from(Unpooled.wrappedBuffer(source.addressOffset(), source.capacity(), false));
   }
 }
