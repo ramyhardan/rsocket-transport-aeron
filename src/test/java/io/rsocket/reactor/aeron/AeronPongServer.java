@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono;
 public final class AeronPongServer {
 
   public static void main(String... args) {
-    AeronResources aeronResources = AeronResources.start();
+    AeronResources aeronResources = new AeronResources().useTmpDir().singleWorker().start().block();
 
     try {
       RSocketFactory.receive()

@@ -17,7 +17,7 @@ public final class AeronPingClient {
   public static void main(String... args) {
     int count = 1_000_000_000;
 
-    AeronResources aeronResources = AeronResources.start();
+    AeronResources aeronResources = new AeronResources().useTmpDir().singleWorker().start().block();
 
     try {
       RSocketFactory.connect()
