@@ -21,18 +21,18 @@
   </scm>
 
   <properties>
-    <scalecube-reactor-aeron.version>0.1.0</scalecube-reactor-aeron.version>
+    <scalecube-reactor-aeron.version>0.1.1</scalecube-reactor-aeron.version>
     <reactor-core.version>3.2.3.RELEASE</reactor-core.version>
     <reactivestreams.version>1.0.2</reactivestreams.version>
-    <rsocket.version>0.11.11</rsocket.version>
+    <rsocket.version>0.11.8</rsocket.version>
 
     <slf4j.version>1.7.7</slf4j.version>
     <log4j.version>2.11.0</log4j.version>
     <disruptor.version>3.4.2</disruptor.version>
 
+    <hdrhistogram.version>2.1.10</hdrhistogram.version>
     <hamcrest-all.version>1.3</hamcrest-all.version>
     <hamcrest-core.version>1.3</hamcrest-core.version>
-    <checkstyle.skip>true</checkstyle.skip>
   </properties>
 
   <dependencies>
@@ -143,6 +143,13 @@
     </dependency>
 
     <!-- Test -->
+    <dependency>
+      <groupId>org.hdrhistogram</groupId>
+      <artifactId>HdrHistogram</artifactId>
+      <version>${hdrhistogram.version}</version>
+      <scope>test</scope>
+    </dependency>
+
     <dependency>
       <groupId>io.projectreactor</groupId>
       <artifactId>reactor-test</artifactId>
