@@ -1,5 +1,6 @@
 package io.rsocket.reactor.aeron;
 
+import io.aeron.driver.ThreadingMode;
 import io.rsocket.AbstractRSocket;
 import io.rsocket.ConnectionSetupPayload;
 import io.rsocket.Frame;
@@ -16,7 +17,12 @@ import reactor.core.publisher.Mono;
 public final class AeronPongServer {
 
   public static void main(String... args) {
-    AeronResources aeronResources = new AeronResources().useTmpDir().singleWorker().start().block();
+    AeronResources aeronResources =
+        new AeronResources()
+            .useTmpDir()
+            .media(mdc -> mdc.threadingMode(ThreadingMode.SHARED))
+            .start()
+            .block();
 
     try {
       RSocketFactory.receive()

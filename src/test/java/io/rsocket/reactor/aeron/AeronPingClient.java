@@ -1,5 +1,6 @@
 package io.rsocket.reactor.aeron;
 
+import io.aeron.driver.ThreadingMode;
 import io.rsocket.Frame;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
@@ -17,7 +18,12 @@ public final class AeronPingClient {
   public static void main(String... args) {
     int count = 1_000_000_000;
 
-    AeronResources aeronResources = new AeronResources().useTmpDir().singleWorker().start().block();
+    AeronResources aeronResources =
+        new AeronResources()
+            .useTmpDir()
+            .media(mdc -> mdc.threadingMode(ThreadingMode.SHARED))
+            .start()
+            .block();
 
     try {
       RSocketFactory.connect()
