@@ -1,30 +1,29 @@
 package io.rsocket.reactor.aeron;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.rsocket.Frame;
 import java.util.function.Function;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import reactor.aeron.DirectBufferHandler;
 
 class FrameMapper implements DirectBufferHandler<Frame>, Function<DirectBuffer, Frame> {
 
-  private final DirectBufferHandler<ByteBuf> byteBufHandler = new ByteBufToDirectBufferHandler();
-
   @Override
   public int estimateLength(Frame frame) {
-    return byteBufHandler.estimateLength(frame.content());
+    return frame.content().readableBytes();
   }
 
   @Override
-  public void write(MutableDirectBuffer destination, int offset, Frame frame, int length) {
-    byteBufHandler.write(destination, offset, frame.content(), length);
+  public void write(MutableDirectBuffer dstBuffer, int offset, Frame frame, int length) {
+    UnsafeBuffer srcBuffer = new UnsafeBuffer(frame.content().memoryAddress(), length);
+    dstBuffer.putBytes(offset, srcBuffer, 0, length);
   }
 
   @Override
   public DirectBuffer map(Frame frame, int length) {
-    return byteBufHandler.map(frame.content(), length);
+    return new UnsafeBuffer(frame.content().memoryAddress(), length);
   }
 
   @Override
@@ -34,6 +33,7 @@ class FrameMapper implements DirectBufferHandler<Frame>, Function<DirectBuffer, 
 
   @Override
   public Frame apply(DirectBuffer source) {
+    // TODO must be changed to get rid of Unpooled
     return Frame.from(Unpooled.wrappedBuffer(source.addressOffset(), source.capacity(), false));
   }
 }

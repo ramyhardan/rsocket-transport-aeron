@@ -20,6 +20,7 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
         .handle(
             c -> {
               AeronDuplexConnection connection = new AeronDuplexConnection(c);
+              // TODO  why  do we need this Mono.never()
               acceptor.apply(connection).then(Mono.<Void>never()).subscribe(c.disposeSubscriber());
               return c.onDispose();
             })
