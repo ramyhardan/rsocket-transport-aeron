@@ -1,7 +1,6 @@
 package io.rsocket.reactor.aeron;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.rsocket.Frame;
 import java.util.function.Function;
@@ -11,7 +10,6 @@ import reactor.aeron.DirectBufferHandler;
 
 class FrameMapper implements DirectBufferHandler<Frame>, Function<DirectBuffer, Frame> {
 
-  private final ByteBufAllocator byteBufAllocator = ByteBufAllocator.DEFAULT;
   private final DirectBufferHandler<ByteBuf> byteBufHandler = new ByteBufToDirectBufferHandler();
 
   @Override
@@ -36,11 +34,6 @@ class FrameMapper implements DirectBufferHandler<Frame>, Function<DirectBuffer, 
 
   @Override
   public Frame apply(DirectBuffer source) {
-    // todo select one way
-    //    ByteBuf destination = byteBufAllocator.buffer(source.capacity());
-    //    ByteBuf temp = Unpooled.wrappedBuffer(source.addressOffset(), source.capacity(), false);
-    //    destination.writeBytes(temp, source.capacity());
-    //    return Frame.from(destination);
     return Frame.from(Unpooled.wrappedBuffer(source.addressOffset(), source.capacity(), false));
   }
 }
