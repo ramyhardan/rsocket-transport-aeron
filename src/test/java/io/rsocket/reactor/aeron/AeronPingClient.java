@@ -8,6 +8,7 @@ import io.rsocket.RSocketFactory;
 import io.rsocket.util.ByteBufPayload;
 import java.time.Duration;
 import org.HdrHistogram.Recorder;
+import org.agrona.concurrent.BusySpinIdleStrategy;
 import reactor.aeron.AeronClient;
 import reactor.aeron.AeronResources;
 import reactor.core.Disposable;
@@ -21,7 +22,16 @@ public final class AeronPingClient {
     AeronResources aeronResources =
         new AeronResources()
             .useTmpDir()
-            .media(mdc -> mdc.threadingMode(ThreadingMode.SHARED))
+            .aeron(a -> a.idleStrategy(new BusySpinIdleStrategy()))
+            .media(
+                mdc ->
+                    mdc.receiverIdleStrategy(new BusySpinIdleStrategy())
+                        .senderIdleStrategy(new BusySpinIdleStrategy())
+                        .sharedIdleStrategy(new BusySpinIdleStrategy())
+                        .sharedNetworkIdleStrategy(new BusySpinIdleStrategy())
+                        .conductorIdleStrategy(new BusySpinIdleStrategy())
+                        .threadingMode(ThreadingMode.DEDICATED))
+            .workerIdleStrategySupplier(BusySpinIdleStrategy::new)
             .start()
             .block();
 

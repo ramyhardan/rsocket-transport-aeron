@@ -10,6 +10,7 @@ import io.rsocket.RSocketFactory;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.util.ByteBufPayload;
 import java.util.concurrent.ThreadLocalRandom;
+import org.agrona.concurrent.BusySpinIdleStrategy;
 import reactor.aeron.AeronResources;
 import reactor.aeron.AeronServer;
 import reactor.core.publisher.Mono;
@@ -20,7 +21,16 @@ public final class AeronPongServer {
     AeronResources aeronResources =
         new AeronResources()
             .useTmpDir()
-            .media(mdc -> mdc.threadingMode(ThreadingMode.SHARED))
+            .aeron(a -> a.idleStrategy(new BusySpinIdleStrategy()))
+            .media(
+                mdc ->
+                    mdc.receiverIdleStrategy(new BusySpinIdleStrategy())
+                        .senderIdleStrategy(new BusySpinIdleStrategy())
+                        .sharedIdleStrategy(new BusySpinIdleStrategy())
+                        .sharedNetworkIdleStrategy(new BusySpinIdleStrategy())
+                        .conductorIdleStrategy(new BusySpinIdleStrategy())
+                        .threadingMode(ThreadingMode.DEDICATED))
+            .workerIdleStrategySupplier(BusySpinIdleStrategy::new)
             .start()
             .block();
 
