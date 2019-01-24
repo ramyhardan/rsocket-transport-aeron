@@ -21,7 +21,7 @@
   </scm>
 
   <properties>
-    <scalecube-reactor-aeron.version>0.1.1</scalecube-reactor-aeron.version>
+    <scalecube-reactor-aeron.version>0.1.2</scalecube-reactor-aeron.version>
     <reactor-core.version>3.2.3.RELEASE</reactor-core.version>
     <reactivestreams.version>1.0.2</reactivestreams.version>
     <rsocket.version>0.11.8</rsocket.version>
@@ -54,6 +54,10 @@
         <exclusion>
           <groupId>io.projectreactor</groupId>
           <artifactId>reactor-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-common</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
