@@ -2,8 +2,8 @@ package io.rsocket.reactor.aeron;
 
 import io.rsocket.Closeable;
 import io.rsocket.transport.ServerTransport;
-import reactor.aeron.OnDisposable;
 import reactor.aeron.AeronServer;
+import reactor.aeron.OnDisposable;
 import reactor.core.publisher.Mono;
 
 public class AeronServerTransport implements ServerTransport<Closeable> {
@@ -20,6 +20,7 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
         .handle(
             c -> {
               AeronDuplexConnection connection = new AeronDuplexConnection(c);
+              // TODO  why  do we need this Mono.never()
               acceptor.apply(connection).then(Mono.<Void>never()).subscribe(c.disposeSubscriber());
               return c.onDispose();
             })
