@@ -7,8 +7,10 @@ import io.rsocket.RSocket;
 import io.rsocket.RSocketFactory;
 import io.rsocket.util.ByteBufPayload;
 import java.time.Duration;
+import java.util.function.Supplier;
 import org.HdrHistogram.Recorder;
-import org.agrona.concurrent.BusySpinIdleStrategy;
+import org.agrona.concurrent.BackoffIdleStrategy;
+import org.agrona.concurrent.IdleStrategy;
 import reactor.aeron.AeronClient;
 import reactor.aeron.AeronResources;
 import reactor.core.Disposable;
@@ -19,19 +21,21 @@ public final class AeronPingClient {
   public static void main(String... args) {
     int count = 1_000_000_000;
 
+    Supplier<IdleStrategy> idleStrategySupplier = () -> new BackoffIdleStrategy(1, 1, 1, 100);
+
     AeronResources aeronResources =
         new AeronResources()
             .useTmpDir()
-            .aeron(a -> a.idleStrategy(new BusySpinIdleStrategy()))
+            .pollFragmentLimit(32)
+            .writeLimit(32)
+            .singleWorker()
             .media(
-                mdc ->
-                    mdc.receiverIdleStrategy(new BusySpinIdleStrategy())
-                        .senderIdleStrategy(new BusySpinIdleStrategy())
-                        .sharedIdleStrategy(new BusySpinIdleStrategy())
-                        .sharedNetworkIdleStrategy(new BusySpinIdleStrategy())
-                        .conductorIdleStrategy(new BusySpinIdleStrategy())
-                        .threadingMode(ThreadingMode.DEDICATED))
-            .workerIdleStrategySupplier(BusySpinIdleStrategy::new)
+                ctx ->
+                    ctx.threadingMode(ThreadingMode.DEDICATED)
+                        .conductorIdleStrategy(idleStrategySupplier.get())
+                        .receiverIdleStrategy(idleStrategySupplier.get())
+                        .senderIdleStrategy(idleStrategySupplier.get())
+                        .termBufferSparseFile(false))
             .start()
             .block();
 
