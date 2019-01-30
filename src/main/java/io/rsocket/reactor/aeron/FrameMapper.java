@@ -1,6 +1,7 @@
 package io.rsocket.reactor.aeron;
 
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.rsocket.Frame;
 import java.util.function.Function;
 import org.agrona.DirectBuffer;
@@ -33,7 +34,9 @@ class FrameMapper implements DirectBufferHandler<Frame>, Function<DirectBuffer, 
 
   @Override
   public Frame apply(DirectBuffer source) {
-    // TODO must be changed to get rid of Unpooled
-    return Frame.from(Unpooled.wrappedBuffer(source.addressOffset(), source.capacity(), false));
+    ByteBuf destination = ByteBufAllocator.DEFAULT.buffer(source.capacity());
+    // UNSAFE.copyMemory(source.addressOffset(), destination.memoryAddress(), source.capacity());
+    source.getBytes(0, destination.internalNioBuffer(0, source.capacity()), source.capacity());
+    return Frame.from(destination);
   }
 }
