@@ -35,7 +35,6 @@ class FrameMapper implements DirectBufferHandler<Frame>, Function<DirectBuffer, 
   @Override
   public Frame apply(DirectBuffer source) {
     ByteBuf destination = ByteBufAllocator.DEFAULT.buffer(source.capacity());
-    // UNSAFE.copyMemory(source.addressOffset(), destination.memoryAddress(), source.capacity());
     source.getBytes(0, destination.internalNioBuffer(0, source.capacity()), source.capacity());
     return Frame.from(destination);
   }
