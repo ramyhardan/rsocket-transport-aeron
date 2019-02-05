@@ -2,6 +2,9 @@ package io.rsocket.test;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.util.Recycler;
+import io.netty.util.Recycler.Handle;
 import io.rsocket.Frame;
 import io.rsocket.reactor.aeron.FrameMapper;
 import java.nio.ByteBuffer;
@@ -84,11 +87,56 @@ public class FrameMapperBenchmark {
    * }
    * </pre>
    */
-  @Benchmark
+  // @Benchmark
   public void aeronToNetty(Blackhole blackhole) {
     Frame frame = frameMapper.apply(aeronSrc);
     blackhole.consume(frame);
     frame.release();
+  }
+
+  // @Benchmark
+  public void aeronToNettyRnD(Blackhole blackhole) {
+    aeronSrc.getBytes(0, nettyDst.internalNioBuffer(0, aeronSrc.capacity()), aeronSrc.capacity());
+  }
+
+  // @Benchmark
+  public void byteBufAllocatorRnD(Blackhole blackhole) {
+    ByteBufFactory byteBufFactory = ByteBufFactory.getOrCreate();
+    blackhole.consume(byteBufFactory.byteBuf);
+    byteBufFactory.recycle();
+  }
+
+  static class ByteBufFactory {
+
+    static final Recycler<ByteBufFactory> recycler =
+        new Recycler<ByteBufFactory>() {
+          @Override
+          protected ByteBufFactory newObject(Handle<ByteBufFactory> handle) {
+            ByteBufFactory byteBufFactory = new ByteBufFactory(handle);
+            byteBufFactory.byteBuf = PooledByteBufAllocator.DEFAULT.buffer(1024);
+            System.err.println("byteBufFactory.byteBuf: " + byteBufFactory.byteBuf);
+            return byteBufFactory;
+          }
+        };
+
+    final Handle<ByteBufFactory> handle;
+
+    ByteBuf byteBuf;
+
+    ByteBufFactory(Handle<ByteBufFactory> handle) {
+      this.handle = handle;
+    }
+
+    void recycle() {
+      byteBuf.release();
+      handle.recycle(this);
+    }
+
+    static ByteBufFactory getOrCreate() {
+      ByteBufFactory byteBufFactory = recycler.get();
+      byteBufFactory.byteBuf.retain();
+      return byteBufFactory;
+    }
   }
 
   public static void main(String[] args) throws RunnerException {
