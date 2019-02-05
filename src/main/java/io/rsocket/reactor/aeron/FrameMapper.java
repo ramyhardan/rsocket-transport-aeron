@@ -28,7 +28,7 @@ class FrameMapper implements DirectBufferHandler<Frame>, Function<DirectBuffer, 
 
   @Override
   public void dispose(Frame frame) {
-    RefCountUtil.safestRelease(frame);
+    frame.release();
   }
 
   @Override
