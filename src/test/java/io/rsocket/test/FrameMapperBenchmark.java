@@ -14,7 +14,6 @@ import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
-import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
@@ -72,7 +71,7 @@ public class FrameMapperBenchmark {
    * dstBuffer.putBytes(offset, srcBuffer, 0, length); }
    * </pre>
    */
-  @Benchmark
+  // @Benchmark
   public void nettyToAeron() {
     frameMapper.write(aeronDst, offset, nettySrc, length);
   }
