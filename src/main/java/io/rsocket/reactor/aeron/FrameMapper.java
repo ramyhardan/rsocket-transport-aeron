@@ -9,7 +9,8 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import reactor.aeron.DirectBufferHandler;
 
-class FrameMapper implements DirectBufferHandler<Frame>, Function<DirectBuffer, Frame> {
+public final class FrameMapper
+    implements DirectBufferHandler<Frame>, Function<DirectBuffer, Frame> {
 
   @Override
   public int estimateLength(Frame frame) {

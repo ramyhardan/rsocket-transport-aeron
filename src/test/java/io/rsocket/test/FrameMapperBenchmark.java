@@ -2,8 +2,8 @@ package io.rsocket.test;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.rsocket.Frame;
+import io.rsocket.reactor.aeron.FrameMapper;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -21,6 +21,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
@@ -33,25 +34,30 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class FrameMapperBenchmark {
 
-  MutableDirectBuffer dstBuffer;
-  DirectBuffer srcBuffer;
+  MutableDirectBuffer aeronDst;
+  DirectBuffer aeronSrc;
   int offset = 0;
-  Frame frame;
+  Frame nettySrc;
   int length = 1024;
+  ByteBuf nettyDst;
+  FrameMapper frameMapper;
 
   @Setup
   public void setUp() {
-    dstBuffer = new ExpandableArrayBuffer(length);
+    aeronDst = new ExpandableArrayBuffer(length);
 
-    byte[] srcBuf = new byte[length];
+    byte[] bytes = new byte[length];
     Random random = new Random();
-    random.nextBytes(srcBuf);
+    random.nextBytes(bytes);
     ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(length);
-    byteBuf.writeBytes(srcBuf);
+    byteBuf.writeBytes(bytes);
 
-    frame = Frame.from(byteBuf);
+    nettySrc = Frame.from(byteBuf);
 
-    srcBuffer = new UnsafeBuffer(ByteBuffer.allocateDirect(length));
+    aeronSrc = new UnsafeBuffer(ByteBuffer.allocateDirect(length));
+    nettyDst = ByteBufAllocator.DEFAULT.buffer(aeronSrc.capacity());
+
+    frameMapper = new FrameMapper();
   }
 
   /**
@@ -64,25 +70,25 @@ public class FrameMapperBenchmark {
    * </pre>
    */
   @Benchmark
-  public void nettyBufferToAeronBuffer() {
-    ByteBuf content = frame.content();
-    content.clear();
-    UnsafeBuffer srcBuffer = new UnsafeBuffer(content.memoryAddress(), length);
-    dstBuffer.putBytes(offset, srcBuffer, 0, length);
+  public void nettyToAeron() {
+    frameMapper.write(aeronDst, offset, nettySrc, length);
   }
 
   /**
    *
    *
    * <pre>
-   * public Frame apply(DirectBuffer source) {
-   * return Frame.from(Unpooled.wrappedBuffer(source.addressOffset(), source.capacity(), false));
+   * ByteBuf destination = ByteBufAllocator.DEFAULT.buffer(source.capacity());
+   * source.getBytes(0, destination.internalNioBuffer(0, source.capacity()), source.capacity());
+   * return Frame.from(destination);
    * }
    * </pre>
    */
   @Benchmark
-  public void aeronBufferToNettyBuffer() {
-    Frame.from(Unpooled.wrappedBuffer(srcBuffer.addressOffset(), srcBuffer.capacity(), false));
+  public void aeronToNetty(Blackhole blackhole) {
+    Frame frame = frameMapper.apply(aeronSrc);
+    blackhole.consume(frame);
+    frame.release();
   }
 
   public static void main(String[] args) throws RunnerException {
