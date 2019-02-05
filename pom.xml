@@ -8,7 +8,7 @@
   </parent>
 
   <artifactId>rsocket-transport-aeron</artifactId>
-  <version>0.1.10-SNAPSHOT</version>
+  <version>0.1.12-SNAPSHOT</version>
 
   <name>ScaleCube/scalecube-rsocket-rtansport-aeron</name>
 
