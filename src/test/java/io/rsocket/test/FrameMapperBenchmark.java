@@ -57,7 +57,7 @@ public class FrameMapperBenchmark {
     nettySrc = Frame.from(byteBuf);
 
     aeronSrc = new UnsafeBuffer(ByteBuffer.allocateDirect(length));
-    nettyDst = ByteBufAllocator.DEFAULT.buffer(aeronSrc.capacity());
+    nettyDst = ByteBufAllocator.DEFAULT.buffer(length);
 
     frameMapper = new FrameMapper();
   }
@@ -66,9 +66,9 @@ public class FrameMapperBenchmark {
    *
    *
    * <pre>
-   * public void write(MutableDirectBuffer dstBuffer, int offset, Frame frame, int length) {
+   * public void write(MutableDirectBuffer dstBuffer, int offset, Frame frame, int length)
    * UnsafeBuffer srcBuffer = new UnsafeBuffer(frame.content().memoryAddress(), length);
-   * dstBuffer.putBytes(offset, srcBuffer, 0, length); }
+   * dstBuffer.putBytes(offset, srcBuffer, 0, length);
    * </pre>
    */
   // @Benchmark
@@ -83,26 +83,31 @@ public class FrameMapperBenchmark {
    * ByteBuf destination = ByteBufAllocator.DEFAULT.buffer(source.capacity());
    * source.getBytes(0, destination.internalNioBuffer(0, source.capacity()), source.capacity());
    * return Frame.from(destination);
-   * }
    * </pre>
    */
   // @Benchmark
-  public void aeronToNetty(Blackhole blackhole) {
+  public void aeronToNetty(Blackhole blackhole) { // 222ns
     Frame frame = frameMapper.apply(aeronSrc);
     blackhole.consume(frame);
     frame.release();
   }
 
   // @Benchmark
-  public void aeronToNettyRnD(Blackhole blackhole) {
+  public void aeronToNettyRnD(Blackhole blackhole) { // 30ns
     aeronSrc.getBytes(0, nettyDst.internalNioBuffer(0, aeronSrc.capacity()), aeronSrc.capacity());
   }
 
   // @Benchmark
-  public void byteBufAllocatorRnD(Blackhole blackhole) {
-    ByteBufFactory byteBufFactory = ByteBufFactory.getOrCreate();
-    blackhole.consume(byteBufFactory.byteBuf);
-    byteBufFactory.recycle();
+  public void byteBufAllocatorRnD(Blackhole blackhole) { // 140ns
+    ByteBuf byteBuf = ByteBufAllocator.DEFAULT.heapBuffer(length);
+    blackhole.consume(byteBuf);
+    byteBuf.release();
+  }
+
+  // @Benchmark
+  public void testFrameFrom(Blackhole blackhole) {
+    Frame frame = Frame.from(nettyDst);
+    blackhole.consume(frame);
   }
 
   static class ByteBufFactory {

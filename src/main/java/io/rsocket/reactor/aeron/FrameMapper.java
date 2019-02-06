@@ -35,8 +35,8 @@ public final class FrameMapper
 
   @Override
   public Frame apply(DirectBuffer source) {
-    ByteBuf destination = ByteBufAllocator.DEFAULT.buffer(source.capacity());
-    source.getBytes(0, destination.internalNioBuffer(0, source.capacity()), source.capacity());
-    return Frame.from(destination);
+    ByteBuf byteBuf = ByteBufAllocator.DEFAULT.heapBuffer(source.capacity());
+    source.getBytes(0, byteBuf.internalNioBuffer(0, source.capacity()), source.capacity());
+    return Frame.from(byteBuf);
   }
 }
