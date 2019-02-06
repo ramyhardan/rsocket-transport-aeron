@@ -3,6 +3,7 @@ package io.rsocket.reactor.aeron;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.rsocket.Frame;
+import java.nio.ByteBuffer;
 import java.util.function.Function;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
@@ -35,8 +36,9 @@ public final class FrameMapper
 
   @Override
   public Frame apply(DirectBuffer source) {
-    ByteBuf byteBuf = ByteBufAllocator.DEFAULT.heapBuffer(source.capacity());
-    source.getBytes(0, byteBuf.internalNioBuffer(0, source.capacity()), source.capacity());
+    int capacity = source.capacity();
+    ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(capacity);
+    source.getBytes(0, (ByteBuffer) byteBuf.internalNioBuffer(0, capacity).rewind(), capacity);
     return Frame.from(byteBuf);
   }
 }

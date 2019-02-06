@@ -2,9 +2,6 @@ package io.rsocket.test;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
 import io.rsocket.Frame;
 import io.rsocket.reactor.aeron.FrameMapper;
 import java.nio.ByteBuffer;
@@ -14,6 +11,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
@@ -47,17 +45,15 @@ public class FrameMapperBenchmark {
   @Setup
   public void setUp() {
     aeronDst = new ExpandableArrayBuffer(length);
+    nettyDst = ByteBufAllocator.DEFAULT.buffer(length);
 
     byte[] bytes = new byte[length];
     Random random = new Random();
     random.nextBytes(bytes);
-    ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(length);
-    byteBuf.writeBytes(bytes);
 
-    nettySrc = Frame.from(byteBuf);
+    nettySrc = Frame.from(ByteBufAllocator.DEFAULT.buffer(length).writeBytes(bytes));
 
-    aeronSrc = new UnsafeBuffer(ByteBuffer.allocateDirect(length));
-    nettyDst = ByteBufAllocator.DEFAULT.buffer(length);
+    aeronSrc = new UnsafeBuffer((ByteBuffer) ByteBuffer.allocateDirect(length).put(bytes).rewind());
 
     frameMapper = new FrameMapper();
   }
@@ -85,62 +81,23 @@ public class FrameMapperBenchmark {
    * return Frame.from(destination);
    * </pre>
    */
-  // @Benchmark
-  public void aeronToNetty(Blackhole blackhole) { // 222ns
+  @Benchmark
+  public void aeronToNetty(Blackhole blackhole) {
     Frame frame = frameMapper.apply(aeronSrc);
     blackhole.consume(frame);
     frame.release();
   }
 
   // @Benchmark
-  public void aeronToNettyRnD(Blackhole blackhole) { // 30ns
+  public void aeronToNettyRnD(Blackhole blackhole) {
     aeronSrc.getBytes(0, nettyDst.internalNioBuffer(0, aeronSrc.capacity()), aeronSrc.capacity());
   }
 
   // @Benchmark
-  public void byteBufAllocatorRnD(Blackhole blackhole) { // 140ns
-    ByteBuf byteBuf = ByteBufAllocator.DEFAULT.heapBuffer(length);
+  public void byteBufAllocatorRnD(Blackhole blackhole) {
+    ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(length);
     blackhole.consume(byteBuf);
     byteBuf.release();
-  }
-
-  // @Benchmark
-  public void testFrameFrom(Blackhole blackhole) {
-    Frame frame = Frame.from(nettyDst);
-    blackhole.consume(frame);
-  }
-
-  static class ByteBufFactory {
-
-    static final Recycler<ByteBufFactory> recycler =
-        new Recycler<ByteBufFactory>() {
-          @Override
-          protected ByteBufFactory newObject(Handle<ByteBufFactory> handle) {
-            ByteBufFactory byteBufFactory = new ByteBufFactory(handle);
-            byteBufFactory.byteBuf = PooledByteBufAllocator.DEFAULT.buffer(1024);
-            System.err.println("byteBufFactory.byteBuf: " + byteBufFactory.byteBuf);
-            return byteBufFactory;
-          }
-        };
-
-    final Handle<ByteBufFactory> handle;
-
-    ByteBuf byteBuf;
-
-    ByteBufFactory(Handle<ByteBufFactory> handle) {
-      this.handle = handle;
-    }
-
-    void recycle() {
-      byteBuf.release();
-      handle.recycle(this);
-    }
-
-    static ByteBufFactory getOrCreate() {
-      ByteBufFactory byteBufFactory = recycler.get();
-      byteBufFactory.byteBuf.retain();
-      return byteBufFactory;
-    }
   }
 
   public static void main(String[] args) throws RunnerException {
