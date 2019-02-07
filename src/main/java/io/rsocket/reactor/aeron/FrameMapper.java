@@ -1,15 +1,16 @@
 package io.rsocket.reactor.aeron;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.rsocket.Frame;
+import java.nio.ByteBuffer;
 import java.util.function.Function;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import reactor.aeron.DirectBufferHandler;
 
-class FrameMapper implements DirectBufferHandler<Frame>, Function<DirectBuffer, Frame> {
+public final class FrameMapper
+    implements DirectBufferHandler<Frame>, Function<DirectBuffer, Frame> {
 
   @Override
   public int estimateLength(Frame frame) {
@@ -29,13 +30,15 @@ class FrameMapper implements DirectBufferHandler<Frame>, Function<DirectBuffer, 
 
   @Override
   public void dispose(Frame frame) {
-    RefCountUtil.safestRelease(frame);
+    frame.release();
   }
 
   @Override
-  public Frame apply(DirectBuffer source) {
-    ByteBuf destination = ByteBufAllocator.DEFAULT.buffer(source.capacity());
-    source.getBytes(0, destination.internalNioBuffer(0, source.capacity()), source.capacity());
-    return Frame.from(destination);
+  public Frame apply(DirectBuffer srcBuffer) {
+    int capacity = srcBuffer.capacity();
+    ByteBuffer dstBuffer = ByteBuffer.allocate(capacity);
+    srcBuffer.getBytes(0, dstBuffer, capacity);
+    dstBuffer.rewind();
+    return Frame.from(Unpooled.wrappedBuffer(dstBuffer));
   }
 }
