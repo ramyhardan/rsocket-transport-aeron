@@ -53,7 +53,9 @@ public class FrameMapperBenchmark {
 
     nettySrc = Frame.from(ByteBufAllocator.DEFAULT.buffer(length).writeBytes(bytes));
 
-    aeronSrc = new UnsafeBuffer((ByteBuffer) ByteBuffer.allocateDirect(length).put(bytes).rewind());
+    ByteBuffer byteBuffer = (ByteBuffer) ByteBuffer.allocateDirect(length).put(bytes).rewind();
+
+    aeronSrc = new UnsafeBuffer(((sun.nio.ch.DirectBuffer) byteBuffer).address(), length);
 
     frameMapper = new FrameMapper();
   }
@@ -88,9 +90,11 @@ public class FrameMapperBenchmark {
     frame.release();
   }
 
-  // @Benchmark
-  public void aeronToNettyRnD(Blackhole blackhole) {
-    aeronSrc.getBytes(0, nettyDst.internalNioBuffer(0, aeronSrc.capacity()), aeronSrc.capacity());
+  @Benchmark
+  public void copyToByteBuffer(Blackhole blackhole) {
+    ByteBuffer byteBuffer = ByteBuffer.allocateDirect(length);
+    aeronSrc.getBytes(0, byteBuffer, length);
+    blackhole.consume(byteBuffer);
   }
 
   // @Benchmark
