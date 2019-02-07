@@ -40,6 +40,7 @@ public class FrameMapperBenchmark {
   Frame nettySrc;
   int length = 1024;
   ByteBuf nettyDst;
+  ByteBuffer byteBuffer;
   FrameMapper frameMapper;
 
   @Setup
@@ -53,7 +54,7 @@ public class FrameMapperBenchmark {
 
     nettySrc = Frame.from(ByteBufAllocator.DEFAULT.buffer(length).writeBytes(bytes));
 
-    ByteBuffer byteBuffer = (ByteBuffer) ByteBuffer.allocateDirect(length).put(bytes).rewind();
+    byteBuffer = (ByteBuffer) ByteBuffer.allocateDirect(length).put(bytes).rewind();
 
     aeronSrc = new UnsafeBuffer(((sun.nio.ch.DirectBuffer) byteBuffer).address(), length);
 
@@ -69,7 +70,7 @@ public class FrameMapperBenchmark {
    * dstBuffer.putBytes(offset, srcBuffer, 0, length);
    * </pre>
    */
-  // @Benchmark
+  @Benchmark
   public void nettyToAeron() {
     frameMapper.write(aeronDst, offset, nettySrc, length);
   }
@@ -84,24 +85,10 @@ public class FrameMapperBenchmark {
    * </pre>
    */
   @Benchmark
-  public void aeronToNetty(Blackhole blackhole) {
+  public void aeronToNettyBuffer(Blackhole blackhole) {
     Frame frame = frameMapper.apply(aeronSrc);
     blackhole.consume(frame);
     frame.release();
-  }
-
-  @Benchmark
-  public void copyToByteBuffer(Blackhole blackhole) {
-    ByteBuffer byteBuffer = ByteBuffer.allocateDirect(length);
-    aeronSrc.getBytes(0, byteBuffer, length);
-    blackhole.consume(byteBuffer);
-  }
-
-  // @Benchmark
-  public void byteBufAllocatorRnD(Blackhole blackhole) {
-    ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(length);
-    blackhole.consume(byteBuf);
-    byteBuf.release();
   }
 
   public static void main(String[] args) throws RunnerException {
