@@ -38,6 +38,7 @@ public final class FrameMapper
     int capacity = srcBuffer.capacity();
     ByteBuffer dstBuffer = ByteBuffer.allocate(capacity);
     srcBuffer.getBytes(0, dstBuffer, capacity);
+    dstBuffer.rewind();
     return Frame.from(Unpooled.wrappedBuffer(dstBuffer));
   }
 }
