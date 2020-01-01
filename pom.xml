@@ -21,9 +21,10 @@
   </scm>
 
   <properties>
-    <scalecube-reactor-aeron.version>0.1.3</scalecube-reactor-aeron.version>
-    <reactor.version>Californium-SR5</reactor.version>
-    <rsocket.version>0.11.17</rsocket.version>
+    <scalecube-reactor-aeron.version>0.2.1-RC-2</scalecube-reactor-aeron.version>
+<!--    <scalecube-reactor-aeron.version>0.2.0</scalecube-reactor-aeron.version>-->
+    <reactor.version>Dysprosium-RELEASE</reactor.version>
+    <rsocket.version>1.0.0-RC5</rsocket.version>
 
     <slf4j.version>1.7.25</slf4j.version>
     <log4j.version>2.11.0</log4j.version>
@@ -31,8 +32,8 @@
 
     <jmh.version>1.21</jmh.version>
     <hdrhistogram.version>2.1.10</hdrhistogram.version>
-    <mockito-junit-jupiter.version>2.17.0</mockito-junit-jupiter.version>
-    <junit-jupiter.version>5.1.0</junit-jupiter.version>
+    <mockito-junit-jupiter.version>2.27.0</mockito-junit-jupiter.version>
+    <junit-jupiter.version>5.1.1</junit-jupiter.version>
     <hamcrest.version>1.3</hamcrest.version>
     <mockito-core.version>2.23.0</mockito-core.version>
   </properties>
@@ -62,8 +63,13 @@
   <dependencies>
     <dependency>
       <groupId>io.scalecube</groupId>
-      <artifactId>reactor-aeron-core</artifactId>
+      <artifactId>reactor-aeron</artifactId>
       <version>${scalecube-reactor-aeron.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-core</artifactId>
     </dependency>
 
     <dependency>
@@ -93,6 +99,7 @@
       <version>${disruptor.version}</version>
     </dependency>
 
+    <!-- Test -->
     <dependency>
       <groupId>io.rsocket</groupId>
       <artifactId>rsocket-test</artifactId>
@@ -100,12 +107,6 @@
       <scope>test</scope>
     </dependency>
 
-    <dependency>
-      <groupId>io.projectreactor</groupId>
-      <artifactId>reactor-core</artifactId>
-    </dependency>
-
-    <!-- Test -->
     <dependency>
       <groupId>org.hdrhistogram</groupId>
       <artifactId>HdrHistogram</artifactId>
@@ -140,6 +141,7 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>

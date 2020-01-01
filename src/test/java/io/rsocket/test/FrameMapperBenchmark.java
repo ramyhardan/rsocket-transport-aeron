@@ -58,7 +58,7 @@ public class FrameMapperBenchmark {
 
     aeronSrc = new UnsafeBuffer(((sun.nio.ch.DirectBuffer) byteBuffer).address(), length);
 
-    frameMapper = new FrameMapper();
+    frameMapper = new FrameMapper(allocator, encodeLength);
   }
 
   /**

@@ -1,9 +1,13 @@
 package io.rsocket.reactor.aeron;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.rsocket.Closeable;
+import io.rsocket.DuplexConnection;
+import io.rsocket.fragmentation.FragmentationDuplexConnection;
 import io.rsocket.transport.ServerTransport;
-import reactor.aeron.AeronServer;
+import java.util.Objects;
 import reactor.aeron.OnDisposable;
+import reactor.aeron.mdc.AeronServer;
 import reactor.core.publisher.Mono;
 
 public class AeronServerTransport implements ServerTransport<Closeable> {
@@ -15,17 +19,38 @@ public class AeronServerTransport implements ServerTransport<Closeable> {
   }
 
   @Override
-  public Mono<Closeable> start(ConnectionAcceptor acceptor) {
-    return server
-        .handle(
-            c -> {
-              AeronDuplexConnection connection = new AeronDuplexConnection(c);
-              // TODO  why  do we need this Mono.never()
-              acceptor.apply(connection).then(Mono.<Void>never()).subscribe(c.disposeSubscriber());
-              return c.onDispose();
-            })
-        .bind()
-        .map(AeronServerWrapper::new);
+  public Mono<Closeable> start(ConnectionAcceptor acceptor, int mtu) {
+    Objects.requireNonNull(acceptor, "acceptor must not be null");
+    Mono<Closeable> isError = FragmentationDuplexConnection.checkMtu(mtu);
+    return isError != null
+        ? isError
+        : server
+            .handle(
+                c -> {
+                  // c.addHandlerLast(new RSocketLengthCodec());
+                  DuplexConnection connection;
+                  if (mtu > 0) {
+                    connection =
+                        new FragmentationDuplexConnection(
+                            new AeronDuplexConnection(
+                                c, new FrameMapper(ByteBufAllocator.DEFAULT, false)),
+                            ByteBufAllocator.DEFAULT,
+                            mtu,
+                            true,
+                            "server");
+                  } else {
+                    connection =
+                        new AeronDuplexConnection(
+                            c, new FrameMapper(ByteBufAllocator.DEFAULT));
+                  }
+                  acceptor
+                      .apply(connection)
+                      .then(Mono.<Void>never())
+                      .subscribe(c.disposeSubscriber());
+                  return c.onDispose();
+                })
+            .bind()
+            .map(AeronServerWrapper::new);
   }
 
   private static class AeronServerWrapper implements Closeable {

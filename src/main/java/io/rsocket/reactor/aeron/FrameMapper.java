@@ -1,44 +1,59 @@
 package io.rsocket.reactor.aeron;
 
-import io.netty.buffer.Unpooled;
-import io.rsocket.Frame;
-import java.nio.ByteBuffer;
-import java.util.function.Function;
+import io.aeron.logbuffer.Header;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.rsocket.frame.FrameLengthFlyweight;
 import org.agrona.DirectBuffer;
-import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import reactor.aeron.DirectBufferHandler;
+import reactor.aeron.FragmentMapper;
 
-public final class FrameMapper
-    implements DirectBufferHandler<Frame>, Function<DirectBuffer, Frame> {
+public class FrameMapper implements DirectBufferHandler<ByteBuf>, FragmentMapper<ByteBuf> {
 
-  @Override
-  public int estimateLength(Frame frame) {
-    return frame.content().readableBytes();
+  private final ByteBufAllocator allocator;
+  private final boolean encodeLength;
+
+  public FrameMapper(ByteBufAllocator allocator) {
+    this(allocator, true);
+  }
+
+  public FrameMapper(ByteBufAllocator allocator, boolean encodeLength) {
+    this.allocator = allocator;
+    this.encodeLength = encodeLength;
   }
 
   @Override
-  public void write(MutableDirectBuffer dstBuffer, int offset, Frame frame, int length) {
-    UnsafeBuffer srcBuffer = new UnsafeBuffer(frame.content().memoryAddress(), length);
-    dstBuffer.putBytes(offset, srcBuffer, 0, length);
+  public DirectBuffer map(ByteBuf buffer) {
+    ByteBuf frame = encode(buffer);
+    return new UnsafeBuffer(frame.memoryAddress(), frame.readableBytes());
   }
 
   @Override
-  public DirectBuffer map(Frame frame, int length) {
-    return new UnsafeBuffer(frame.content().memoryAddress(), length);
+  public void dispose(ByteBuf buffer) {
+    buffer.release();
   }
 
   @Override
-  public void dispose(Frame frame) {
-    frame.release();
+  public ByteBuf apply(DirectBuffer srcBuffer, int offset, int length, Header header) {
+    ByteBuf dstBuffer = allocator.buffer(length);
+    srcBuffer.getBytes(offset, dstBuffer.nioBuffer(), length);
+    return decode(dstBuffer);
   }
 
-  @Override
-  public Frame apply(DirectBuffer srcBuffer) {
-    int capacity = srcBuffer.capacity();
-    ByteBuffer dstBuffer = ByteBuffer.allocate(capacity);
-    srcBuffer.getBytes(0, dstBuffer, capacity);
-    dstBuffer.rewind();
-    return Frame.from(Unpooled.wrappedBuffer(dstBuffer));
+  private ByteBuf encode(ByteBuf frame) {
+    if (encodeLength) {
+      return FrameLengthFlyweight.encode(allocator, frame.readableBytes(), frame);
+    } else {
+      return frame;
+    }
+  }
+
+  private ByteBuf decode(ByteBuf frame) {
+    if (encodeLength) {
+      return FrameLengthFlyweight.frame(frame).retain();
+    } else {
+      return frame;
+    }
   }
 }
