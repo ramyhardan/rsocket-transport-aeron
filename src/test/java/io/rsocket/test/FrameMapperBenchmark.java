@@ -7,6 +7,7 @@ import io.rsocket.reactor.aeron.FrameMapper;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import org.agrona.BufferUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
@@ -54,9 +55,9 @@ public class FrameMapperBenchmark {
 
     nettySrc = Frame.from(ByteBufAllocator.DEFAULT.buffer(length).writeBytes(bytes));
 
-    byteBuffer = (ByteBuffer) ByteBuffer.allocateDirect(length).put(bytes).rewind();
+    byteBuffer = ByteBuffer.allocateDirect(length).put(bytes).rewind();
 
-    aeronSrc = new UnsafeBuffer(((sun.nio.ch.DirectBuffer) byteBuffer).address(), length);
+    aeronSrc = new UnsafeBuffer(BufferUtil.address(byteBuffer), length);
 
     frameMapper = new FrameMapper();
   }
