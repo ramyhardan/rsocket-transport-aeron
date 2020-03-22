@@ -21,18 +21,18 @@
   </scm>
 
   <properties>
-    <scalecube-reactor-aeron.version>0.1.3</scalecube-reactor-aeron.version>
-    <reactor.version>Californium-SR5</reactor.version>
-    <rsocket.version>0.11.17</rsocket.version>
+    <reactor-aeron.version>0.2.1-RC-3</reactor-aeron.version>
+    <reactor.version>Dysprosium-RELEASE</reactor.version>
+    <rsocket.version>1.0.0-RC5</rsocket.version>
 
-    <slf4j.version>1.7.25</slf4j.version>
-    <log4j.version>2.11.0</log4j.version>
+    <slf4j.version>1.7.30</slf4j.version>
+    <log4j.version>2.13.1</log4j.version>
     <disruptor.version>3.4.2</disruptor.version>
 
-    <jmh.version>1.21</jmh.version>
-    <hdrhistogram.version>2.1.10</hdrhistogram.version>
+    <jmh.version>1.23</jmh.version>
+    <hdrhistogram.version>2.1.12</hdrhistogram.version>
     <mockito-junit-jupiter.version>2.17.0</mockito-junit-jupiter.version>
-    <junit-jupiter.version>5.1.0</junit-jupiter.version>
+    <junit-jupiter.version>5.6.0</junit-jupiter.version>
     <hamcrest.version>1.3</hamcrest.version>
     <mockito-core.version>2.23.0</mockito-core.version>
   </properties>
@@ -63,7 +63,7 @@
     <dependency>
       <groupId>io.scalecube</groupId>
       <artifactId>reactor-aeron-core</artifactId>
-      <version>${scalecube-reactor-aeron.version}</version>
+      <version>${reactor-aeron.version}</version>
     </dependency>
 
     <dependency>
